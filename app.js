@@ -27,6 +27,13 @@
 
     await loadScript('./languages.js');
     await loadScript('./app-core.js');
+
+    // V5.3: local-first cloud progress synchronization for signed-in learners.
+    try{
+      await loadScript('./cloud-sync.js');
+    }catch(error){
+      console.warn('[Language Lab Free] Cloud progress sync unavailable; progress remains safely stored on this device.',error);
+    }
   }
 
   boot().catch(()=>{

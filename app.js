@@ -18,7 +18,6 @@
       console.warn('[Language Lab Free] Cloud layer unavailable; continuing in guest mode.',error);
     }
 
-    // Authentication UI also supports guest mode when Supabase is unavailable.
     try{
       await loadScript('./auth.js');
     }catch(error){
@@ -26,16 +25,22 @@
     }
 
     await loadScript('./languages.js');
+
+    // V7: course-quality layer enriches/corrects language content before the learning engine renders it.
+    try{
+      await loadScript('./v7-content.js');
+    }catch(error){
+      console.warn('[Language Lab Free] Enhanced V7 course content unavailable; base course data remains available.',error);
+    }
+
     await loadScript('./app-core.js');
 
-    // V5.3: local-first cloud progress synchronization for signed-in learners.
     try{
       await loadScript('./cloud-sync.js');
     }catch(error){
       console.warn('[Language Lab Free] Cloud progress sync unavailable; progress remains safely stored on this device.',error);
     }
 
-    // V6.1: guided daily lesson, review shortcuts and continue-position experience.
     try{
       await loadScript('./v6-learning.js');
     }catch(error){

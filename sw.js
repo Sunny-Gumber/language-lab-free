@@ -1,5 +1,5 @@
-const CACHE='language-lab-free-github-v26';
-const ASSETS=['./','./index.html','./styles.css','./auth.css','./app.js','./app-core.js','./languages.js','./core-logic.js','./storage-scope.js','./v7-content.js','./v8-content.js','./skills-v10.js','./v9-content.js','./v9-course-ui.js','./cloud-sync-v10.js','./v6-learning.js','./v8-listen-speak.js','./v10-hardening.js','./onboarding-v10.js','./my-languages-v10.js','./supabase-client.js','./auth.js','./manifest.webmanifest'];
+const CACHE='language-lab-free-github-v27';
+const ASSETS=['./','./index.html','./styles.css','./auth.css','./app.js','./app-core.js','./languages.js','./core-logic.js','./storage-scope.js','./v7-content.js','./v8-content.js','./skills-v10.js','./v9-content.js','./v9-course-ui.js','./cloud-sync-v10.js','./v6-learning.js','./v8-listen-speak.js','./v10-hardening.js','./onboarding-v10.js','./my-languages-v10.js','./supabase-client.js','./auth.js','./manifest.webmanifest','./icon.svg'];
 const STATIC_PATHS=new Set(ASSETS.map(x=>new URL(x,self.location.href).pathname));
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

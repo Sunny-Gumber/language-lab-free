@@ -34,6 +34,13 @@
     }catch(error){
       console.warn('[Language Lab Free] Cloud progress sync unavailable; progress remains safely stored on this device.',error);
     }
+
+    // V6.1: guided daily lesson, review shortcuts and continue-position experience.
+    try{
+      await loadScript('./v6-learning.js');
+    }catch(error){
+      console.warn('[Language Lab Free] Guided learning layer unavailable; core learning remains available.',error);
+    }
   }
 
   boot().catch(()=>{

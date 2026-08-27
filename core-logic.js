@@ -50,7 +50,8 @@
   function timeValue(value){const n=Date.parse(value||'');return Number.isFinite(n)?n:0}
 
   function resolveProfilePreferences(local={},remote=null,validCodes=[]){
-    const localTs=timeValue(local.profilePrefsUpdatedAt),remoteTs=timeValue(remote?.updated_at);
+    const remotePrefTimestamp=remote?.learning_preferences_updated_at||remote?.updated_at||null;
+    const localTs=timeValue(local.profilePrefsUpdatedAt),remoteTs=timeValue(remotePrefTimestamp);
     // Equal timestamps favor local state so a just-made preference change is never rolled back by a same-time cloud row.
     const useRemote=Boolean(remote)&&remoteTs>localTs;
     const selected=(useRemote?remote?.selected_language:local.selected)||local.selected||remote?.selected_language||validCodes[0]||'ja';
@@ -60,7 +61,7 @@
       enabledLanguages:enabled.length?enabled:[selected],
       audioPreference:normalizeAudio(useRemote?remote?.audio_preference:local.audioPreference),
       onboardingCompleted:Boolean(useRemote?remote?.onboarding_completed:local.onboardingCompleted),
-      profilePrefsUpdatedAt:useRemote?(remote?.updated_at||local.profilePrefsUpdatedAt||null):(local.profilePrefsUpdatedAt||remote?.updated_at||null),
+      profilePrefsUpdatedAt:useRemote?(remotePrefTimestamp||local.profilePrefsUpdatedAt||null):(local.profilePrefsUpdatedAt||remotePrefTimestamp||null),
       source:useRemote?'remote':'local'
     };
   }

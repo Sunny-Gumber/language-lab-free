@@ -13,7 +13,7 @@
   function scopeForUser(user){return user?.id?`account:${user.id}`:'guest'}
   function activeScope(){return localStorage.getItem(ACTIVE_SCOPE_KEY)||'guest'}
   function keyForScope(scope){return scope==='guest'?GUEST_STORAGE_KEY:scope?.startsWith('account:')?ACCOUNT_STORAGE_PREFIX+scope.slice(8):null}
-  function blankState(scope=activeScope()){return {selected:scope==='guest'?'ja':null,primaryLanguage:null,xp:0,streak:1,lastStudy:null,languages:{},enabledLanguages:[],audioPreference:'auto',onboardingCompleted:false,profilePrefsUpdatedAt:null}}
+  function blankState(scope=activeScope()){return {selected:scope==='guest'?'ja':null,primaryLanguage:null,xp:0,streak:1,lastStudy:null,languages:{},enabledLanguages:[],audioPreference:'auto',onboardingCompleted:false,profilePrefsUpdatedAt:null,profilePrefsDirty:false}}
   function readState(){return safeParse(localStorage.getItem(STORAGE_KEY),blankState())||blankState()}
   function readScoped(scope=activeScope()){
     const key=keyForScope(scope),raw=key?localStorage.getItem(key):null;

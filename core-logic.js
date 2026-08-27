@@ -52,8 +52,8 @@
   function resolveProfilePreferences(local={},remote=null,validCodes=[]){
     const remotePrefTimestamp=remote?.learning_preferences_updated_at||remote?.updated_at||null;
     const localTs=timeValue(local.profilePrefsUpdatedAt),remoteTs=timeValue(remotePrefTimestamp);
-    // Equal timestamps favor local state so a just-made preference change is never rolled back by a same-time cloud row.
-    const useRemote=Boolean(remote)&&remoteTs>localTs;
+    // Unsynced local preferences always win until the server confirms the exact values.
+    const useRemote=Boolean(remote)&&!local.profilePrefsDirty&&remoteTs>localTs;
     const selected=(useRemote?remote?.selected_language:local.selected)||local.selected||remote?.selected_language||validCodes[0]||'ja';
     const enabled=normalizeEnabledLanguages(useRemote?remote?.enabled_languages:local.enabledLanguages,selected,validCodes);
     return {
@@ -62,6 +62,7 @@
       audioPreference:normalizeAudio(useRemote?remote?.audio_preference:local.audioPreference),
       onboardingCompleted:Boolean(useRemote?remote?.onboarding_completed:local.onboardingCompleted),
       profilePrefsUpdatedAt:useRemote?(remotePrefTimestamp||local.profilePrefsUpdatedAt||null):(local.profilePrefsUpdatedAt||remotePrefTimestamp||null),
+      profilePrefsDirty:Boolean(local.profilePrefsDirty&&!useRemote),
       source:useRemote?'remote':'local'
     };
   }

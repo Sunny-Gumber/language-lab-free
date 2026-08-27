@@ -26,14 +26,13 @@
 
     await loadScript('./languages.js');
 
-    // V7: course-quality corrections and expanded beginner foundations.
     try{
       await loadScript('./v7-content.js');
     }catch(error){
       console.warn('[Language Lab Free] Enhanced V7 course content unavailable; base course data remains available.',error);
     }
 
-    // V8: staged curricula. Japanese and Mandarin now span beginner through advanced tracks.
+    // V8: staged curricula. Japanese and Mandarin span beginner through advanced tracks.
     try{
       await loadScript('./v8-content.js');
     }catch(error){
@@ -59,6 +58,13 @@
       await loadScript('./v6-learning.js');
     }catch(error){
       console.warn('[Language Lab Free] Guided learning layer unavailable; core learning remains available.',error);
+    }
+
+    // Load after V6 so Listen & Speak can become the primary daily-practice entry point.
+    try{
+      await loadScript('./v8-listen-speak.js');
+    }catch(error){
+      console.warn('[Language Lab Free] V8 Listen & Speak practice unavailable; the rest of the course remains available.',error);
     }
   }
 

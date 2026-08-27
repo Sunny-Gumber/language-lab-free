@@ -5,10 +5,10 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const read=name=>fs.readFileSync(path.join(root,name),'utf8');
 
-test('every local runtime script loaded by app.js exists',()=>{
+test('every local runtime script referenced by app.js exists',()=>{
   const app=read('app.js');
-  const refs=[...app.matchAll(/loadScript\(['"]\.\/([^'"]+)['"]\)/g)].map(m=>m[1]);
-  assert.ok(refs.length>5);
+  const refs=[...app.matchAll(/(?:loadScript|optional)\(['"]\.\/([^'"]+)['"]/g)].map(m=>m[1]);
+  assert.ok(refs.length>10,`Expected full runtime list, found ${refs.length}`);
   for(const ref of refs)assert.ok(fs.existsSync(path.join(root,ref)),`Missing runtime file: ${ref}`);
 });
 

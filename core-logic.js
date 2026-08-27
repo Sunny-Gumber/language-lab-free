@@ -51,7 +51,8 @@
 
   function resolveProfilePreferences(local={},remote=null,validCodes=[]){
     const localTs=timeValue(local.profilePrefsUpdatedAt),remoteTs=timeValue(remote?.updated_at);
-    const useRemote=Boolean(remote)&&remoteTs>=localTs;
+    // Equal timestamps favor local state so a just-made preference change is never rolled back by a same-time cloud row.
+    const useRemote=Boolean(remote)&&remoteTs>localTs;
     const selected=(useRemote?remote?.selected_language:local.selected)||local.selected||remote?.selected_language||validCodes[0]||'ja';
     const enabled=normalizeEnabledLanguages(useRemote?remote?.enabled_languages:local.enabledLanguages,selected,validCodes);
     return {

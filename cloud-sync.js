@@ -4,7 +4,7 @@
   const cloud=window.LANGUAGE_LAB_SUPABASE||{};
   const client=cloud.client||null;
   const LOCAL_WATCH_MS=1200;
-  const CLOUD_RECONCILE_MS=10000;
+  const CLOUD_RECONCILE_MS=60*60*1000; // hourly fallback; Realtime still handles active cross-device updates
   let user=null,syncing=false,queued=false,initializedFor=null,lastSnapshot='',localTimer=null,cloudTimer=null,realtimeChannel=null;
 
   function readLocal(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{}}catch{return {}}}
@@ -47,7 +47,6 @@
 
   async function pushState(s,remote){
     const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',today=localDate();
-    // Never lower shared progress. This preserves guest migration safety and prevents a stale device overwriting a newer one.
     const profile={id:user.id,total_xp:Math.max(Number(s.xp||0),Number(remote.profile?.total_xp||0)),current_streak:Math.max(Number(s.streak||0),Number(remote.profile?.current_streak||0)),longest_streak:Math.max(Number(remote.profile?.longest_streak||0),Number(s.streak||0)),last_study_date:maxDate(s.lastStudy||null,remote.profile?.last_study_date||null),selected_language:s.selected||remote.profile?.selected_language||'ja',timezone};
     const {error:pe}=await client.from('profiles').upsert(profile,{onConflict:'id'});if(pe)throw pe;
     const remoteByLang=Object.fromEntries((remote.languages||[]).map(r=>[r.language_code,r]));
@@ -70,44 +69,23 @@
       const merged=mergeCloudIntoLocal(readLocal(),remote);
       writeLocal(merged);refreshUI();
       await pushState(merged,remote);
-      // Pull once more after the write so “Synced” means this browser has the latest cloud state.
       const confirmed=await fetchCloud();
       const finalState=mergeCloudIntoLocal(readLocal(),confirmed);
       writeLocal(finalState);refreshUI();
       lastSnapshot=localStorage.getItem(STORAGE_KEY)||JSON.stringify(finalState);
       setStatus('☁ Synced','ok');
       window.dispatchEvent(new CustomEvent('language-lab-cloud-synced',{detail:{reason,userId:user.id}}));
-    }catch(error){
-      console.warn('[Language Lab Free] Cloud sync failed:',error);
-      setStatus(navigator.onLine?'☁ Sync pending':'Offline · saved locally','error');
-    }finally{syncing=false;if(queued)setTimeout(()=>sync('queued'),250);}
+    }catch(error){console.warn('[Language Lab Free] Cloud sync failed:',error);setStatus(navigator.onLine?'☁ Sync pending':'Offline · saved locally','error');}
+    finally{syncing=false;if(queued)setTimeout(()=>sync('queued'),250);}
   }
 
-  function watchLocal(){
-    clearInterval(localTimer);lastSnapshot=localStorage.getItem(STORAGE_KEY)||'';
-    localTimer=setInterval(()=>{if(!user)return;const now=localStorage.getItem(STORAGE_KEY)||'';if(now!==lastSnapshot){lastSnapshot=now;sync('local-change');}},LOCAL_WATCH_MS);
-  }
-  function watchCloud(){clearInterval(cloudTimer);cloudTimer=setInterval(()=>{if(user&&navigator.onLine)sync('cloud-reconcile');},CLOUD_RECONCILE_MS);}
+  function watchLocal(){clearInterval(localTimer);lastSnapshot=localStorage.getItem(STORAGE_KEY)||'';localTimer=setInterval(()=>{if(!user)return;const now=localStorage.getItem(STORAGE_KEY)||'';if(now!==lastSnapshot){lastSnapshot=now;sync('local-change');}},LOCAL_WATCH_MS);}
+  function watchCloud(){clearInterval(cloudTimer);cloudTimer=setInterval(()=>{if(user&&navigator.onLine)sync('hourly-cloud-reconcile');},CLOUD_RECONCILE_MS);}
   function stopRealtime(){if(realtimeChannel&&client){try{client.removeChannel(realtimeChannel);}catch{}}realtimeChannel=null;}
-  function startRealtime(){
-    stopRealtime();if(!client?.channel||!user)return;
-    try{
-      realtimeChannel=client.channel(`language-lab-${user.id}`)
-        .on('postgres_changes',{event:'*',schema:'public',table:'profiles',filter:`id=eq.${user.id}`},()=>sync('realtime-profile'))
-        .on('postgres_changes',{event:'*',schema:'public',table:'language_progress',filter:`user_id=eq.${user.id}`},()=>sync('realtime-language'))
-        .on('postgres_changes',{event:'*',schema:'public',table:'study_activity',filter:`user_id=eq.${user.id}`},()=>sync('realtime-activity'))
-        .subscribe();
-    }catch(error){console.debug('[Language Lab Free] Realtime unavailable; periodic reconciliation remains active.',error);}
-  }
+  function startRealtime(){stopRealtime();if(!client?.channel||!user)return;try{realtimeChannel=client.channel(`language-lab-${user.id}`).on('postgres_changes',{event:'*',schema:'public',table:'profiles',filter:`id=eq.${user.id}`},()=>sync('realtime-profile')).on('postgres_changes',{event:'*',schema:'public',table:'language_progress',filter:`user_id=eq.${user.id}`},()=>sync('realtime-language')).on('postgres_changes',{event:'*',schema:'public',table:'study_activity',filter:`user_id=eq.${user.id}`},()=>sync('realtime-activity')).subscribe();}catch(error){console.debug('[Language Lab Free] Realtime unavailable; hourly reconciliation remains active.',error);}}
   function stopWatchers(){clearInterval(localTimer);clearInterval(cloudTimer);localTimer=null;cloudTimer=null;stopRealtime();}
 
-  async function start(nextUser){
-    user=nextUser||null;
-    if(!user){stopWatchers();initializedFor=null;setStatus('Guest · this device','');return;}
-    if(initializedFor===user.id)return;
-    initializedFor=user.id;setStatus('⟳ Loading cloud','busy');
-    await sync('sign-in');watchLocal();watchCloud();startRealtime();
-  }
+  async function start(nextUser){user=nextUser||null;if(!user){stopWatchers();initializedFor=null;setStatus('Guest · this device','');return;}if(initializedFor===user.id)return;initializedFor=user.id;setStatus('⟳ Loading cloud','busy');await sync('sign-in');watchLocal();watchCloud();startRealtime();}
 
   window.addEventListener('language-lab-auth-changed',e=>start(e.detail?.user||null));
   window.addEventListener('online',()=>{if(user)sync('online')});

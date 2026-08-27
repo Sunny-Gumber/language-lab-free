@@ -21,14 +21,14 @@
     el.textContent=text;el.dataset.state=kind;el.title=text;
   }
   function injectStyle(){if(document.getElementById('cloudSyncStyle'))return;const s=document.createElement('style');s.id='cloudSyncStyle';s.textContent=`.cloud-sync-status{font-size:11px;font-weight:800;color:#64748b;white-space:nowrap}.cloud-sync-status[data-state="ok"]{color:#15803d}.cloud-sync-status[data-state="busy"]{color:#2563eb}.cloud-sync-status[data-state="error"]{color:#b45309}@media(max-width:560px){.cloud-sync-status{display:none}}`;document.head.appendChild(s)}
-  function refreshUI(full=false){try{renderTop?.();renderLanguages?.();if(full&&document.getElementById('courseScreen')?.classList.contains('active'))renderCourse?.();else if(document.getElementById('progressTab')?.classList.contains('active'))renderProgress?.()}catch(e){console.debug('[Language Lab Free] UI refresh skipped',e)}}
+  function refreshUI(full=false){try{if(typeof renderTop==='function')renderTop();if(typeof renderLanguages==='function')renderLanguages();if(full&&document.getElementById('courseScreen')?.classList.contains('active')&&typeof renderCourse==='function')renderCourse();else if(document.getElementById('progressTab')?.classList.contains('active')&&typeof renderProgress==='function')renderProgress()}catch(e){console.debug('[Language Lab Free] UI refresh skipped',e)}}
   function expectedScope(userId){return `account:${userId}`}
   function syncStillValid(userId,generation){return Boolean(user&&user.id===userId&&generation===scopeGeneration&&Store?.activeScope?.()===expectedScope(userId))}
   function langDefaults(v={}){return {mastery:{},writes:0,quizCorrect:0,quizTotal:0,favorites:[],xp:0,...v,mastery:{...(v.mastery||{})},favorites:[...(v.favorites||[])]}}
 
   async function fetchCloud(userId){
     const [p,l,a]=await Promise.all([
-      client.from('profiles').select('id,total_xp,current_streak,longest_streak,last_study_date,selected_language,enabled_languages,audio_preference,onboarding_completed,timezone,updated_at').eq('id',userId).maybeSingle(),
+      client.from('profiles').select('id,total_xp,current_streak,longest_streak,last_study_date,selected_language,enabled_languages,audio_preference,onboarding_completed,learning_preferences_updated_at,timezone,updated_at').eq('id',userId).maybeSingle(),
       client.from('language_progress').select('language_code,current_unit,current_lesson,mastery,favorites,writing_attempts,quiz_correct,quiz_total,xp,updated_at').eq('user_id',userId),
       client.from('study_activity').select('activity_date,xp_earned,study_minutes,updated_at').eq('user_id',userId).order('activity_date',{ascending:false}).limit(60)
     ]);
@@ -37,13 +37,10 @@
   }
 
   function mergeCloudIntoLocal(local,remote){
-    const p=remote.profile||null,primaryLocal=local.primaryLanguage||local.selected||'ja';
-    const prefInput={...local,selected:primaryLocal};
-    const prefs=Core.resolveProfilePreferences?Core.resolveProfilePreferences(prefInput,p,validCodes()):{selected:p?.selected_language||primaryLocal,enabledLanguages:normalizeEnabled(p?.enabled_languages,primaryLocal),audioPreference:normalizeAudio(p?.audio_preference),onboardingCompleted:Boolean(p?.onboarding_completed),profilePrefsUpdatedAt:p?.updated_at||local.profilePrefsUpdatedAt||null};
-    const primary=prefs.selected||primaryLocal;
-    const enabled=normalizeEnabled(prefs.enabledLanguages,primary);
-    const currentSelected=enabled.includes(local.selected)?local.selected:primary;
-    const out={...local,selected:currentSelected,primaryLanguage:primary,enabledLanguages:enabled,audioPreference:prefs.audioPreference,onboardingCompleted:prefs.onboardingCompleted,profilePrefsUpdatedAt:prefs.profilePrefsUpdatedAt,xp:Number(local.xp||0),streak:Number(local.streak||1),lastStudy:local.lastStudy||null,languages:{...(local.languages||{})}};
+    const p=remote.profile||null,primaryLocal=local.primaryLanguage||local.selected||'ja',prefInput={...local,selected:primaryLocal};
+    const prefs=Core.resolveProfilePreferences?Core.resolveProfilePreferences(prefInput,p,validCodes()):{selected:p?.selected_language||primaryLocal,enabledLanguages:normalizeEnabled(p?.enabled_languages,primaryLocal),audioPreference:normalizeAudio(p?.audio_preference),onboardingCompleted:Boolean(p?.onboarding_completed),profilePrefsUpdatedAt:p?.learning_preferences_updated_at||p?.updated_at||local.profilePrefsUpdatedAt||null,profilePrefsDirty:Boolean(local.profilePrefsDirty)};
+    const primary=prefs.selected||primaryLocal,enabled=normalizeEnabled(prefs.enabledLanguages,primary),currentSelected=enabled.includes(local.selected)?local.selected:primary;
+    const out={...local,selected:currentSelected,primaryLanguage:primary,enabledLanguages:enabled,audioPreference:prefs.audioPreference,onboardingCompleted:prefs.onboardingCompleted,profilePrefsUpdatedAt:prefs.profilePrefsUpdatedAt,profilePrefsDirty:Boolean(prefs.profilePrefsDirty),xp:Number(local.xp||0),streak:Number(local.streak||1),lastStudy:local.lastStudy||null,languages:{...(local.languages||{})}};
     if(p){out.xp=Math.max(out.xp,Number(p.total_xp||0));out.streak=Math.max(out.streak,Number(p.current_streak||0));out.lastStudy=maxDate(out.lastStudy,p.last_study_date)}
     for(const r of remote.languages){
       const l=langDefaults(out.languages[r.language_code]);
@@ -60,6 +57,7 @@
     const p=remote.profile;if(!p)return true;
     return Number(p.total_xp||0)!==payload.total_xp||Number(p.current_streak||0)!==payload.current_streak||Number(p.longest_streak||0)!==payload.longest_streak||(p.last_study_date||null)!==(payload.last_study_date||null)||(p.selected_language||null)!==payload.selected_language||!sameSet(p.enabled_languages||[],payload.enabled_languages||[])||normalizeAudio(p.audio_preference)!==payload.audio_preference||Boolean(p.onboarding_completed)!==payload.onboarding_completed||(p.timezone||'UTC')!==payload.timezone;
   }
+  function preferencesMatch(s,p){if(!p)return false;const primary=s.primaryLanguage||s.selected||'ja';return (p.selected_language||'ja')===primary&&sameSet(p.enabled_languages||[],normalizeEnabled(s.enabledLanguages,primary))&&normalizeAudio(p.audio_preference)===normalizeAudio(s.audioPreference)&&Boolean(p.onboarding_completed)===Boolean(s.onboardingCompleted)}
   function languageRow(code,v,remoteRow,userId){
     const r=remoteRow||{};
     return {user_id:userId,language_code:code,current_unit:Math.max(Number(v.currentUnit||0),Number(r.current_unit||0)),current_lesson:Math.max(Number(v.currentLesson||0),Number(r.current_lesson||0)),mastery:mergeMastery(v.mastery||{},r.mastery||{}),favorites:union(v.favorites||[],r.favorites||[]),writing_attempts:Math.max(Number(v.writes||0),Number(r.writing_attempts||0)),quiz_correct:Math.max(Number(v.quizCorrect||0),Number(r.quiz_correct||0)),quiz_total:Math.max(Number(v.quizTotal||0),Number(r.quiz_total||0)),xp:Math.max(Number(v.xp||0),Number(r.xp||0))};
@@ -70,10 +68,10 @@
     const profile=profilePayload(s,remote,userId),remoteByLang=Object.fromEntries((remote.languages||[]).map(r=>[r.language_code,r]));
     const rows=Object.entries(s.languages||{}).map(([code,v])=>languageRow(code,v,remoteByLang[code],userId)).filter(row=>languageChanged(row,remoteByLang[row.language_code]));
     const today=Store?.studyDate?.()||Core.studyDate?.()||new Date().toISOString().slice(0,10),previousDays=(remote.activity||[]).filter(x=>x.activity_date!==today).reduce((sum,x)=>sum+Number(x.xp_earned||0),0),earnedToday=Math.max(0,Number(profile.total_xp||0)-previousDays),current=(remote.activity||[]).find(x=>x.activity_date===today),activityRow=profile.last_study_date===today?{user_id:userId,activity_date:today,xp_earned:Math.max(Number(current?.xp_earned||0),earnedToday),study_minutes:Number(current?.study_minutes||0)}:null;
-    const activityChanged=activityRow&&(!current||Number(current.xp_earned||0)!==activityRow.xp_earned||Number(current.study_minutes||0)!==activityRow.study_minutes);
-    if(!profileChanged(profile,remote)&&!rows.length&&!activityChanged)return false;
+    const activityChanged=activityRow&&(!current||Number(current.xp_earned||0)!==activityRow.xp_earned||Number(current.study_minutes||0)!==activityRow.study_minutes),profileNeedsWrite=profileChanged(profile,remote);
+    if(!profileNeedsWrite&&!rows.length&&!activityChanged)return false;
     ignoreRealtimeUntil=Date.now()+1800;
-    if(profileChanged(profile,remote)){const {error}=await client.from('profiles').upsert(profile,{onConflict:'id'});if(error)throw error}
+    if(profileNeedsWrite){const {error}=await client.from('profiles').upsert(profile,{onConflict:'id'});if(error)throw error}
     if(rows.length){const {error}=await client.from('language_progress').upsert(rows,{onConflict:'user_id,language_code'});if(error)throw error}
     if(activityChanged){const {error}=await client.from('study_activity').upsert(activityRow,{onConflict:'user_id,activity_date'});if(error)throw error}
     return true;
@@ -89,7 +87,9 @@
       const merged=mergeCloudIntoLocal(readLocal(),remote);writeLocal(merged);refreshUI();
       await pushState(merged,remote,userId);if(!syncStillValid(userId,generation))return;
       const confirmed=await fetchCloud(userId);if(!syncStillValid(userId,generation))return;
-      const finalState=mergeCloudIntoLocal(readLocal(),confirmed);writeLocal(finalState);refreshUI();lastSnapshot=JSON.stringify(finalState);setStatus('☁ Synced','ok');window.dispatchEvent(new CustomEvent('language-lab-cloud-synced',{detail:{reason,userId}}));
+      let localAfter=readLocal();
+      if(localAfter.profilePrefsDirty&&preferencesMatch(localAfter,confirmed.profile)){localAfter={...localAfter,profilePrefsDirty:false,profilePrefsUpdatedAt:confirmed.profile?.learning_preferences_updated_at||confirmed.profile?.updated_at||localAfter.profilePrefsUpdatedAt||null};writeLocal(localAfter)}
+      const finalState=mergeCloudIntoLocal(localAfter,confirmed);writeLocal(finalState);refreshUI();lastSnapshot=localStorage.getItem(Store?.STORAGE_KEY||'languageLabFreeV3')||JSON.stringify(finalState);setStatus('☁ Synced','ok');window.dispatchEvent(new CustomEvent('language-lab-cloud-synced',{detail:{reason,userId}}));
     }catch(error){if(syncStillValid(userId,generation)){console.warn('[Language Lab Free] Cloud sync failed:',error);setStatus(navigator.onLine?'☁ Sync pending':'Offline · saved locally','error')}}
     finally{syncing=false;if(queued&&syncStillValid(userId,generation))setTimeout(()=>sync('queued'),350)}
   }
@@ -116,7 +116,7 @@
     if(patch.enabledLanguages||patch.enabled_languages)s.enabledLanguages=normalizeEnabled(patch.enabledLanguages||patch.enabled_languages,primary);
     if(patch.audioPreference||patch.audio_preference)s.audioPreference=normalizeAudio(patch.audioPreference||patch.audio_preference);
     if('onboardingCompleted'in patch||'onboarding_completed'in patch)s.onboardingCompleted=Boolean(patch.onboardingCompleted??patch.onboarding_completed);
-    s.profilePrefsUpdatedAt=new Date().toISOString();writeLocal(s);refreshUI();return user?sync('profile-preferences'):Promise.resolve();
+    s.profilePrefsDirty=true;s.profilePrefsUpdatedAt=new Date().toISOString();writeLocal(s);refreshUI();return user?sync('profile-preferences'):Promise.resolve();
   }
 
   window.addEventListener('language-lab-auth-changed',e=>start(e.detail?.user||null));

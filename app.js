@@ -75,6 +75,13 @@
     }catch(error){
       console.warn('[Language Lab Free] Listen & Speak practice unavailable; the full course remains available.',error);
     }
+
+    // Signed-in learners complete this once; language + voice preference are stored on their account.
+    try{
+      await loadScript('./onboarding.js');
+    }catch(error){
+      console.warn('[Language Lab Free] Learning-preference onboarding unavailable; the course remains usable.',error);
+    }
   }
 
   boot().catch(()=>{

@@ -20,20 +20,33 @@ test('mastery merge never lowers progress',()=>{
 });
 
 test('newer local profile preferences win before cloud upload',()=>{
-  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',onboardingCompleted:true,profilePrefsUpdatedAt:'2026-08-27T12:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'male',onboarding_completed:true,updated_at:'2026-08-27T11:00:00Z'},['ja','zh']);
+  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',onboardingCompleted:true,profilePrefsUpdatedAt:'2026-08-27T12:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'male',onboarding_completed:true,learning_preferences_updated_at:'2026-08-27T11:00:00Z'},['ja','zh']);
   assert.equal(result.source,'local');
   assert.equal(result.selected,'zh');
   assert.deepEqual(result.enabledLanguages,['zh','ja']);
 });
 
-test('equal profile timestamps favor local unsynced preference',()=>{
-  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',profilePrefsUpdatedAt:'2026-08-27T12:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'auto',updated_at:'2026-08-27T12:00:00Z'},['ja','zh']);
+test('equal preference timestamps favor local state',()=>{
+  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',profilePrefsUpdatedAt:'2026-08-27T12:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'auto',learning_preferences_updated_at:'2026-08-27T12:00:00Z'},['ja','zh']);
   assert.equal(result.source,'local');
   assert.equal(result.selected,'zh');
 });
 
-test('newer remote profile preferences win on another device',()=>{
-  const result=Core.resolveProfilePreferences({selected:'ja',enabledLanguages:['ja'],audioPreference:'auto',profilePrefsUpdatedAt:'2026-08-27T10:00:00Z'},{selected_language:'zh',enabled_languages:['zh','ja'],audio_preference:'female',onboarding_completed:true,updated_at:'2026-08-27T11:00:00Z'},['ja','zh']);
+test('dirty local preferences win even when remote preference timestamp is newer',()=>{
+  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',profilePrefsDirty:true,profilePrefsUpdatedAt:'2026-08-27T10:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'auto',learning_preferences_updated_at:'2026-08-27T13:00:00Z'},['ja','zh']);
+  assert.equal(result.source,'local');
+  assert.equal(result.selected,'zh');
+  assert.equal(result.profilePrefsDirty,true);
+});
+
+test('unrelated profile updated_at does not override a newer local preference timestamp',()=>{
+  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',profilePrefsUpdatedAt:'2026-08-27T12:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'auto',learning_preferences_updated_at:'2026-08-27T11:00:00Z',updated_at:'2026-08-27T14:00:00Z'},['ja','zh']);
+  assert.equal(result.source,'local');
+  assert.equal(result.selected,'zh');
+});
+
+test('newer remote learning preference timestamp wins on another device',()=>{
+  const result=Core.resolveProfilePreferences({selected:'ja',enabledLanguages:['ja'],audioPreference:'auto',profilePrefsUpdatedAt:'2026-08-27T10:00:00Z'},{selected_language:'zh',enabled_languages:['zh','ja'],audio_preference:'female',onboarding_completed:true,learning_preferences_updated_at:'2026-08-27T11:00:00Z',updated_at:'2026-08-27T12:00:00Z'},['ja','zh']);
   assert.equal(result.source,'remote');
   assert.equal(result.selected,'zh');
   assert.deepEqual(result.enabledLanguages,['zh','ja']);

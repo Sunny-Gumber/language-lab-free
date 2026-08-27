@@ -2,9 +2,17 @@
   "name": "Language Lab Free",
   "short_name": "Language Lab",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#0f172a",
   "description": "Interactive multi-language learning for 10 major languages.",
-  "icons": []
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

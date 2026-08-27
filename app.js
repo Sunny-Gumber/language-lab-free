@@ -68,6 +68,13 @@
     }catch(error){
       console.warn('[Language Lab Free] Guided learning layer unavailable; core learning remains available.',error);
     }
+
+    // Communication-first practice loads last so it can become the primary daily entry point without replacing V9 lessons.
+    try{
+      await loadScript('./v8-listen-speak.js');
+    }catch(error){
+      console.warn('[Language Lab Free] Listen & Speak practice unavailable; the full course remains available.',error);
+    }
   }
 
   boot().catch(()=>{

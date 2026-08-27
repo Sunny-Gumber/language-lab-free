@@ -1,73 +1,208 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f172a" />
-  <meta name="description" content="Language Lab Free — interactive free language learning for Japanese, Mandarin, Korean, English, Hindi, Spanish, French, German, Arabic and Portuguese." />
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="stylesheet" href="./styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Language Lab Free — listen-first and speak-early language learning for Japanese, Mandarin, Korean, English, Hindi, Spanish, French, German, Arabic and Portuguese.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
   <title>Language Lab Free</title>
 </head>
 <body>
 <header class="topbar">
-  <button id="brandHome" class="brand" aria-label="Go to home">
-    <div class="logo">LL</div>
-    <div><h1>Language Lab Free</h1><p>Learn • Listen • Write • Speak</p></div>
+  <button id="brandHome" class="brand" type="button" aria-label="Go to home">
+    <span class="logo">LL</span>
+    <span class="brand-copy"><strong>Language Lab Free</strong><small>Listen • Speak • Learn</small></span>
   </button>
-  <div class="top-actions"><span class="pill">🔥 <b id="topStreak">1</b></span><span class="pill"><b id="topXp">0</b> XP</span></div>
+  <div class="top-actions">
+    <span id="syncStatus" class="sync-status">Guest</span>
+    <span class="pill">🔥 <b id="topStreak">0</b></span>
+    <span class="pill"><b id="topXp">0</b> XP</span>
+    <button id="accountBtn" class="account-btn" type="button">👤 Sign in</button>
+  </div>
 </header>
+
 <main class="shell">
   <section id="homeScreen" class="screen active">
     <section class="hero">
-      <div>
-        <span class="eyebrow light">10 major languages • no login required</span>
-        <h2>Learn a language by <span>using it.</span></h2>
-        <p>Short lessons combine sound, reading, handwriting, vocabulary, speaking, recall and culture.</p>
-        <div class="hero-actions"><button id="resumeBtn" class="primary">Continue learning</button><button id="dailyBtn" class="secondary dark">Today's mission</button></div>
+      <div class="hero-copy">
+        <span class="eyebrow light">Listen first • speak early • 10 languages</span>
+        <h1>Learn a language by <span>using it.</span></h1>
+        <p>Build practical understanding through listening, speaking, recognition, recall and optional writing practice.</p>
+        <div class="actions">
+          <button id="resumeBtn" class="primary" type="button">Continue learning</button>
+          <button id="dailyBtn" class="secondary dark" type="button">Today's practice</button>
+        </div>
       </div>
-      <div class="hero-languages" aria-hidden="true"><span>あ</span><span>你</span><span>한</span><span>अ</span><span>ع</span><span>Ñ</span><span>é</span><span>ß</span><span>ã</span><span>Hello</span></div>
+      <div class="hero-languages" aria-hidden="true"><span>あ</span><span>你</span><span>한</span><span>अ</span><span>ع</span><span>Hola</span></div>
     </section>
+
+    <section class="dashboard-grid">
+      <article class="daily-card">
+        <div class="section-inline">
+          <div>
+            <span class="eyebrow">Today's practice</span>
+            <h2 id="dailyTitle">Listen & speak</h2>
+            <p id="dailyProgressText" class="muted">Start with the skills that need the most work.</p>
+          </div>
+          <span id="dailyLanguage" class="large-flag">🇯🇵</span>
+        </div>
+        <div id="dailyTasks" class="daily-tasks"></div>
+        <button id="dailyStartBtn" class="primary full" type="button">Start today's practice</button>
+      </article>
+      <article class="goal-card">
+        <span class="eyebrow">Daily XP goal</span>
+        <div class="goal-number"><strong id="dailyXp">0</strong><span>/ <b id="dailyGoal">30</b> XP</span></div>
+        <div class="progressbar large"><span id="dailyGoalBar"></span></div>
+        <div class="goal-buttons" aria-label="Daily XP goal">
+          <button data-goal="20" type="button">20</button>
+          <button data-goal="30" type="button">30</button>
+          <button data-goal="50" type="button">50</button>
+        </div>
+      </article>
+    </section>
+
     <section class="home-stats">
       <div><small>Total XP</small><strong id="homeXp">0</strong></div>
-      <div><small>Study streak</small><strong><span id="homeStreak">1</span> days</strong></div>
+      <div><small>Study streak</small><strong><span id="homeStreak">0</span> days</strong></div>
       <div><small>Languages started</small><strong id="homeStarted">0</strong></div>
       <div><small>Reviews due</small><strong id="homeDue">0</strong></div>
     </section>
-    <div class="section-head"><div><h3>Choose a language</h3><p>Each course follows the language's own script and pronunciation system.</p></div><select id="levelFilter"><option value="all">All courses</option><option value="script">Script-focused</option><option value="latin">Latin alphabet</option></select></div>
+
+    <div class="section-head">
+      <div><h2 id="languagesHeading">Choose a language</h2><p id="languagesDescription">Guest mode shows all available courses.</p></div>
+      <div class="language-actions">
+        <button id="addLanguageBtn" class="primary hidden" type="button">+ Add language</button>
+        <button id="manageLanguagesBtn" class="secondary hidden" type="button">Manage</button>
+      </div>
+    </div>
     <div id="languageGrid" class="language-grid"></div>
+
     <section class="how-grid">
-      <article><b>👂 Listen</b><span>Hear words and phrases at normal or slow speed.</span></article>
-      <article><b>✍️ Write</b><span>Trace scripts with finger, stylus or mouse.</span></article>
-      <article><b>🎙️ Speak</b><span>Use browser speech recognition for practice feedback.</span></article>
-      <article><b>🧠 Remember</b><span>Flashcards, favorites, quizzes and review queues.</span></article>
+      <article><b>👂 Listen</b><span>Audio-first comprehension before reading the answer.</span></article>
+      <article><b>🎙️ Speak</b><span>Shadowing and browser speech-recognition practice.</span></article>
+      <article><b>🧠 Recall</b><span>Active retrieval through cards and mixed questions.</span></article>
+      <article><b>✍️ Write</b><span>Optional script practice when writing matters.</span></article>
     </section>
   </section>
+
   <section id="courseScreen" class="screen">
     <div class="course-head">
-      <button id="backBtn" class="icon-btn" aria-label="Back">←</button>
-      <div class="course-id"><span id="courseFlag" class="flag">🇯🇵</span><div><span class="eyebrow" id="courseLevel">Beginner</span><h2 id="courseName">Japanese</h2></div></div>
-      <button id="installBtn" class="secondary small hidden">Install</button>
+      <button id="backBtn" class="icon-btn" type="button" aria-label="Back to home">←</button>
+      <div class="course-id"><span id="courseFlag" class="large-flag">🇯🇵</span><div><span id="courseLevel" class="eyebrow">Foundation</span><h1 id="courseName">Japanese</h1></div></div>
+      <button id="installBtn" class="secondary small hidden" type="button">Install</button>
     </div>
+
+    <div id="stageNav" class="stage-nav"></div>
+
     <nav class="tabs" aria-label="Course sections">
-      <button class="tab active" data-tab="learn">Learn</button><button class="tab" data-tab="guide">Guide</button><button class="tab" data-tab="write">Write</button><button class="tab" data-tab="words">Words</button><button class="tab" data-tab="speak">Speak</button><button class="tab" data-tab="cards">Cards</button><button class="tab" data-tab="quiz">Quiz</button><button class="tab" data-tab="progress">Progress</button>
+      <button class="tab active" data-tab="practice" type="button">👂 Listen & Speak</button>
+      <button class="tab" data-tab="learn" type="button">Learn</button>
+      <button class="tab" data-tab="guide" type="button">Guide</button>
+      <button class="tab" data-tab="write" type="button">Write</button>
+      <button class="tab" data-tab="words" type="button">Words</button>
+      <button class="tab" data-tab="cards" type="button">Cards</button>
+      <button class="tab" data-tab="quiz" type="button">Quiz</button>
+      <button class="tab" data-tab="progress" type="button">Progress</button>
     </nav>
-    <section id="learnTab" class="panel active">
-      <section class="unit-hero"><div><span class="eyebrow light">Unit <span id="unitIndexText">1</span></span><h2 id="unitTitle">First sounds</h2><p id="unitGoal"></p></div><div class="ring"><strong id="unitMastery">0%</strong><span>mastery</span></div></section>
-      <div class="toolbar"><select id="unitSelect"></select><button id="reviewBtn" class="secondary">Review weak items <span id="weakCount">0</span></button></div>
-      <div id="lessonItems" class="lesson-items"></div>
-      <div class="two-col"><article class="card focus-card"><span class="eyebrow">Focus</span><div id="focusNative" class="native-xl"></div><div id="focusRoman" class="roman"></div><p id="focusPron" class="muted"></p><div class="actions"><button id="hearBtn" class="primary">🔊 Hear</button><button id="slowBtn" class="secondary">🐢 Slow</button></div></article><article class="card"><h3>Pronunciation</h3><p id="focusGuide"></p><div class="repeat"><span>Repeat 3×</span><strong id="repeatText"></strong></div><div class="example"><span class="eyebrow">Example</span><div id="exampleNative" class="native-lg"></div><div><b id="exampleRoman"></b> — <span id="exampleMeaning"></span></div><button id="exampleBtn" class="ghost">Hear example</button></div></article></div>
+
+    <section id="practiceTab" class="panel active">
+      <div class="practice-layout">
+        <article class="card voice-card">
+          <span class="eyebrow">Audio</span><h2>Choose how you want to listen</h2>
+          <div class="voice-grid">
+            <label>Voice preference<select id="audioPreference"><option value="auto">Auto</option><option value="female">Female preferred</option><option value="male">Male preferred</option></select></label>
+            <label>Exact voice on this device<select id="exactVoice"><option value="">Automatic best voice</option></select></label>
+          </div>
+          <div class="actions"><button id="previewVoiceBtn" class="secondary" type="button">🔊 Current</button><button id="previewFemaleBtn" class="secondary" type="button">♀ Female</button><button id="previewMaleBtn" class="secondary" type="button">♂ Male</button></div>
+          <p id="voiceInfo" class="tiny muted">Voice availability depends on your phone, browser and operating system.</p>
+        </article>
+
+        <article class="card practice-card">
+          <div class="section-inline"><div><span class="eyebrow">Communication practice</span><h2 id="practiceTitle">Listen first</h2></div><span id="practiceStageBadge" class="badge">Foundation</span></div>
+          <div id="practiceStageList" class="stage-chips"></div>
+          <div id="practiceModes" class="mode-list">
+            <button class="mode active" data-mode="listen" type="button">👂 Listen</button>
+            <button class="mode" data-mode="shadow" type="button">🗣 Shadow</button>
+            <button class="mode" data-mode="meaning" type="button">🎙 From meaning</button>
+            <button class="mode" data-mode="conversation" type="button">💬 Conversation</button>
+          </div>
+          <div id="practiceBody" class="practice-body"></div>
+        </article>
+      </div>
+      <article class="card"><div class="section-head compact"><div><h2>Skill profile</h2><p>Mastery includes unpracticed course targets as zero; coverage shows how much you have attempted.</p></div></div><div id="skillGrid" class="skill-grid"></div></article>
     </section>
-    <section id="guideTab" class="panel"><div class="info-grid"><article class="card"><span class="eyebrow">About the language</span><h2 id="aboutName"></h2><p id="aboutText"></p><div id="factsList" class="facts"></div></article><article class="card"><span class="eyebrow">Writing system</span><h2 id="scriptName"></h2><p id="scriptText"></p><div id="scriptSamples" class="script-samples"></div></article><article class="card"><span class="eyebrow">Pronunciation focus</span><h2>What beginners should notice</h2><ul id="pronTips" class="bullet-list"></ul></article><article class="card"><span class="eyebrow">Culture tip</span><h2>Use it naturally</h2><p id="cultureTip"></p><button id="culturePhraseBtn" class="primary">Hear useful phrase</button></article></div></section>
-    <section id="writeTab" class="panel"><div class="section-head"><div><h2 id="writeTitle">Writing practice</h2><p>Trace the guide, hide it, then reproduce from memory.</p></div><select id="writeSelect"></select></div><div class="two-col write-layout"><article class="card"><span class="eyebrow">Stroke / formation guide</span><div id="writeNative" class="native-xl center"></div><div id="stepBadge" class="badge"></div><ol id="stepList" class="steps"></ol><button id="animateBtn" class="secondary full">Animate steps</button><div id="stepPlayer" class="step-player">Tap “Animate steps”.</div></article><article class="card"><div class="canvas-head"><div><h3>Practice pad</h3><p class="muted">Finger, stylus or mouse</p></div><label class="toggle"><input id="guideToggle" type="checkbox" checked /> Guide</label></div><div class="canvas-box"><div id="canvasGuide" class="canvas-guide"></div><canvas id="drawCanvas"></canvas></div><div class="actions"><button id="clearBtn" class="secondary">Clear</button><button id="writeDoneBtn" class="primary">Done</button></div><p id="writeFeedback" class="feedback"></p></article></div></section>
-    <section id="wordsTab" class="panel"><div class="section-head"><div><h2>Vocabulary & phrases</h2><p>Search, listen and star difficult words.</p></div><input id="wordSearch" class="search" type="search" placeholder="Search words…" /></div><div class="word-tools"><button id="allWordsBtn" class="chip active">All</button><button id="favWordsBtn" class="chip">★ Favorites</button></div><div id="wordGrid" class="word-grid"></div><article class="card phrase-builder"><span class="eyebrow">Phrase builder</span><h3 id="builderInstruction">Build the phrase</h3><p id="builderMeaning" class="muted"></p><div id="builderAnswer" class="builder-answer"></div><div id="builderTokens" class="builder-tokens"></div><div class="actions"><button id="builderReset" class="secondary">Reset</button><button id="builderCheck" class="primary">Check</button></div><p id="builderFeedback" class="feedback"></p></article></section>
-    <section id="speakTab" class="panel"><div class="two-col"><article class="card"><span class="eyebrow">Speaking drill</span><div id="speakNative" class="native-xl speech-native"></div><div id="speakRoman" class="roman"></div><p id="speakMeaning" class="muted"></p><div class="actions"><button id="listenSpeakBtn" class="primary">🔊 Listen</button><button id="nextSpeakBtn" class="secondary">Next phrase</button></div></article><article class="card"><h3>Pronunciation check</h3><p class="muted">The score compares the speech-recognition transcript with the target text. It is a practice signal, not phoneme-level assessment.</p><button id="micBtn" class="mic">🎙️ Start speaking</button><div class="result-grid"><div><span class="eyebrow">Browser heard</span><strong id="heardText">—</strong></div><div><span class="eyebrow">Text match</span><strong id="matchText">—</strong></div></div><p id="speechFeedback" class="feedback"></p><p id="speechSupport" class="tiny muted"></p></article></div></section>
-    <section id="cardsTab" class="panel"><div class="section-head"><div><h2>Flashcards</h2><p>Try to recall the meaning before revealing the answer.</p></div><button id="shuffleCardsBtn" class="secondary">Shuffle</button></div><article id="flashcard" class="flashcard" tabindex="0" role="button" aria-label="Reveal flashcard answer"><span class="eyebrow">Tap to reveal</span><div id="cardFront" class="native-xl"></div><div id="cardBack" class="card-back hidden"><b id="cardRoman"></b><p id="cardMeaning"></p></div></article><div class="card-actions"><button id="cardAgain" class="secondary">Again</button><button id="cardGood" class="primary">Got it</button></div></section>
-    <section id="quizTab" class="panel"><article class="card quiz-card"><div class="quiz-head"><div><span class="eyebrow">Knowledge check</span><h2 id="quizQuestion">Choose the meaning.</h2></div><span id="quizCount" class="badge">1 / 10</span></div><div id="quizPrompt" class="native-xl center quiz-native"></div><div id="quizOptions" class="quiz-options"></div><p id="quizFeedback" class="feedback"></p><button id="nextQuizBtn" class="primary full hidden">Next</button></article></section>
-    <section id="progressTab" class="panel"><div class="stats-grid"><article class="card stat"><span>Language XP</span><strong id="langXp">0</strong></article><article class="card stat"><span>Writing attempts</span><strong id="writesStat">0</strong></article><article class="card stat"><span>Quiz accuracy</span><strong id="quizStat">0%</strong></article><article class="card stat"><span>Favorites</span><strong id="favStat">0</strong></article></div><article class="card"><div class="section-head compact"><div><h3>Mastery map</h3><p>Items below 70% are automatically treated as weak.</p></div><button id="resetCourseBtn" class="danger small">Reset course</button></div><div id="masteryList"></div></article></section>
+
+    <section id="learnTab" class="panel">
+      <section class="unit-hero"><div><span class="eyebrow light">Unit <span id="unitIndexText">1</span></span><h2 id="unitTitle"></h2><p id="unitGoal"></p></div><div class="ring"><strong id="unitMastery">0%</strong><span>active mastery</span></div></section>
+      <div class="toolbar"><select id="unitSelect"></select><button id="reviewBtn" class="secondary" type="button">Review weakest item</button></div>
+      <div id="lessonItems" class="lesson-items"></div>
+      <div class="two-col">
+        <article class="card focus-card"><span class="eyebrow">Focus</span><div id="focusNative" class="native-xl"></div><div id="focusRoman" class="roman"></div><p id="focusPron" class="muted"></p><div class="actions"><button id="hearBtn" class="primary" type="button">🔊 Hear</button><button id="slowBtn" class="secondary" type="button">🐢 Slow</button></div></article>
+        <article class="card"><span class="eyebrow">Pronunciation</span><h2>Notice this</h2><p id="focusGuide"></p><div class="example"><span class="eyebrow">Example</span><div id="exampleNative" class="native-lg"></div><div><b id="exampleRoman"></b> — <span id="exampleMeaning"></span></div><button id="exampleBtn" class="ghost" type="button">Hear example</button></div></article>
+      </div>
+      <section id="deepLesson" class="deep-lesson"></section>
+    </section>
+
+    <section id="guideTab" class="panel">
+      <div class="info-grid">
+        <article class="card"><span class="eyebrow">About</span><h2 id="aboutName"></h2><p id="aboutText"></p><div id="factsList" class="facts"></div></article>
+        <article class="card"><span class="eyebrow">Writing system</span><h2 id="scriptName"></h2><p id="scriptText"></p><div id="scriptSamples" class="script-samples"></div></article>
+        <article class="card"><span class="eyebrow">Pronunciation focus</span><h2>What to notice</h2><ul id="pronTips" class="bullet-list"></ul></article>
+        <article class="card"><span class="eyebrow">Culture</span><h2>Use it naturally</h2><p id="cultureTip"></p><button id="culturePhraseBtn" class="primary" type="button">Hear useful phrase</button></article>
+      </div>
+    </section>
+
+    <section id="writeTab" class="panel">
+      <p class="notice">Writing completion records practice effort only. It does not judge character shape or stroke order with AI.</p>
+      <div class="section-head"><div><h2 id="writeTitle">Writing practice</h2><p>Use the guide, hide it, then reproduce the form from memory.</p></div><select id="writeSelect"></select></div>
+      <div class="two-col write-layout">
+        <article class="card"><span class="eyebrow">Formation guide</span><div id="writeNative" class="native-xl center"></div><ol id="stepList" class="steps"></ol></article>
+        <article class="card"><div class="canvas-head"><div><h2>Practice pad</h2><p class="muted">Finger, stylus or mouse</p></div><label class="toggle"><input id="guideToggle" type="checkbox" checked> Guide</label></div><div class="canvas-box"><div id="canvasGuide" class="canvas-guide"></div><canvas id="drawCanvas"></canvas></div><div class="actions"><button id="clearBtn" class="secondary" type="button">Clear</button><button id="writeDoneBtn" class="primary" type="button">Record practice</button></div><p id="writeFeedback" class="feedback"></p></article>
+      </div>
+    </section>
+
+    <section id="wordsTab" class="panel">
+      <div class="section-head"><div><h2>Vocabulary & phrases</h2><p>Search, listen and save useful words.</p></div><input id="wordSearch" class="search" type="search" placeholder="Search words…"></div>
+      <div class="word-tools"><button id="allWordsBtn" class="chip active" type="button">All</button><button id="favWordsBtn" class="chip" type="button">★ Favorites</button></div>
+      <div id="wordGrid" class="word-grid"></div>
+      <article class="card phrase-builder"><span class="eyebrow">Phrase builder</span><h2>Build the phrase</h2><p id="builderMeaning" class="muted"></p><div id="builderAnswer" class="builder-answer"></div><div id="builderTokens" class="builder-tokens"></div><div class="actions"><button id="builderReset" class="secondary" type="button">Reset</button><button id="builderCheck" class="primary" type="button">Check</button></div><p id="builderFeedback" class="feedback"></p></article>
+    </section>
+
+    <section id="cardsTab" class="panel">
+      <div class="section-head"><div><h2>Recall cards</h2><p>Try to remember before revealing the answer.</p></div><button id="shuffleCardsBtn" class="secondary" type="button">Shuffle</button></div>
+      <article id="flashcard" class="flashcard" tabindex="0" role="button" aria-label="Reveal flashcard answer"><span class="eyebrow">Tap to reveal</span><div id="cardFront" class="native-xl"></div><div id="cardBack" class="card-back hidden"><b id="cardRoman"></b><p id="cardMeaning"></p></div></article>
+      <div class="card-actions"><button id="cardAgain" class="secondary" type="button">Again</button><button id="cardGood" class="primary" type="button">Got it</button></div>
+    </section>
+
+    <section id="quizTab" class="panel">
+      <article class="card quiz-card"><div class="quiz-head"><div><span class="eyebrow">Recognition check</span><h2 id="quizQuestion">Choose the meaning.</h2></div><span id="quizCount" class="badge">1 / 10</span></div><div id="quizPrompt" class="native-xl center quiz-native"></div><div id="quizOptions" class="quiz-options"></div><p id="quizFeedback" class="feedback"></p><button id="nextQuizBtn" class="primary full hidden" type="button">Next</button></article>
+    </section>
+
+    <section id="progressTab" class="panel">
+      <div class="stats-grid"><article class="card stat"><span>Language XP</span><strong id="langXp">0</strong></article><article class="card stat"><span>Active attempts</span><strong id="attemptsStat">0</strong></article><article class="card stat"><span>Quiz accuracy</span><strong id="quizStat">0%</strong></article><article class="card stat"><span>Favorites</span><strong id="favStat">0</strong></article></div>
+      <article class="card"><div class="section-head compact"><div><h2>Five-skill progress</h2><p>Listening and speaking carry most of the overall learning weight.</p></div></div><div id="progressSkillGrid" class="skill-grid"></div></article>
+      <article class="card progress-card"><div class="section-head compact"><div><h2>Course map</h2><p>Unit progress is derived from active attempts, not button taps.</p></div><button id="resetCourseBtn" class="danger small" type="button">Reset this course</button></div><div id="masteryList"></div></article>
+    </section>
   </section>
 </main>
-<footer><b>Language Lab Free</b><span>Interactive learning that runs in your browser</span></footer>
-<script src="./app.js"></script>
+
+<footer><b>Language Lab Free</b><span>Free browser-based language practice</span></footer>
+
+<div id="authOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle"><section class="modal-card small-modal"><button class="modal-close" data-close="authOverlay" type="button" aria-label="Close">×</button><span class="eyebrow">Language Lab account</span><h2 id="authTitle">Save your progress</h2><div id="authBody"></div></section></div>
+
+<div id="onboardingOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle"><section class="modal-card"><span class="eyebrow">Set up your learning</span><h2 id="onboardingTitle">What do you want to learn?</h2><p class="muted">Choose your primary language and preferred voice. You can add more languages later.</p><h3>1. Primary language</h3><div id="onboardingLanguages" class="modal-language-grid"></div><h3>2. Audio preference</h3><div id="onboardingAudio" class="choice-grid"><button data-onboard-audio="auto" type="button">🔊 <b>Auto</b><small>Best available voice</small></button><button data-onboard-audio="female" type="button">♀ <b>Female preferred</b><small>When identifiable</small></button><button data-onboard-audio="male" type="button">♂ <b>Male preferred</b><small>When identifiable</small></button></div><p class="tiny muted">Browsers do not consistently publish voice gender, so the preference is best-effort. Exact device voices remain selectable inside the course.</p><button id="onboardingSaveBtn" class="primary full" type="button">Start learning</button><p id="onboardingStatus" class="feedback"></p></section></div>
+
+<div id="languagesOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="languagesModalTitle"><section class="modal-card"><button class="modal-close" data-close="languagesOverlay" type="button" aria-label="Close">×</button><span class="eyebrow">My languages</span><h2 id="languagesModalTitle">Add or manage languages</h2><div id="languageManagerGrid" class="manager-grid"></div></section></div>
+
+<script src="./languages.js"></script>
+<script src="./v7-content.js"></script>
+<script src="./v8-content.js"></script>
+<script src="./v9-content.js"></script>
+<script src="./course-export.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>

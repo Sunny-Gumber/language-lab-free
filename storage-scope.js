@@ -13,7 +13,7 @@
   function scopeForUser(user){return user?.id?`account:${user.id}`:'guest'}
   function activeScope(){return localStorage.getItem(ACTIVE_SCOPE_KEY)||'guest'}
   function keyForScope(scope){return scope==='guest'?GUEST_STORAGE_KEY:scope?.startsWith('account:')?ACCOUNT_STORAGE_PREFIX+scope.slice(8):null}
-  function blankState(scope=activeScope()){return {selected:scope==='guest'?'ja':null,xp:0,streak:1,lastStudy:null,languages:{},enabledLanguages:[],audioPreference:'auto',onboardingCompleted:false,profilePrefsUpdatedAt:null}}
+  function blankState(scope=activeScope()){return {selected:scope==='guest'?'ja':null,primaryLanguage:null,xp:0,streak:1,lastStudy:null,languages:{},enabledLanguages:[],audioPreference:'auto',onboardingCompleted:false,profilePrefsUpdatedAt:null}}
   function readState(){return safeParse(localStorage.getItem(STORAGE_KEY),blankState())||blankState()}
   function readScoped(scope=activeScope()){
     const key=keyForScope(scope),raw=key?localStorage.getItem(key):null;
@@ -59,10 +59,11 @@
 
   function legacyScopedKey(baseKey,scope=activeScope()){return `${EXTRA_PREFIX}${encodeURIComponent(scope)}:legacy:${encodeURIComponent(baseKey)}`}
   function activateLegacyKey(baseKey,defaultRaw=null){
-    const scope=activeScope(),key=legacyScopedKey(baseKey,scope),saved=localStorage.getItem(key),migratedKey=MIGRATION_PREFIX+baseKey;
+    const key=legacyScopedKey(baseKey),saved=localStorage.getItem(key),migratedKey=MIGRATION_PREFIX+baseKey;
     if(saved!==null){localStorage.setItem(baseKey,saved);return saved}
-    const old=localStorage.getItem(baseKey);
-    if(localStorage.getItem(migratedKey)!=='1'&&old!==null){localStorage.setItem(key,old);localStorage.setItem(migratedKey,'1');return old}
+    // V10 intentionally does not migrate old unscoped learning extras into an account.
+    // Resetting a daily mission/voice choice once is safer than leaking one user's data into another scope.
+    if(localStorage.getItem(migratedKey)!=='1')localStorage.setItem(migratedKey,'1');
     if(defaultRaw===null)localStorage.removeItem(baseKey);else localStorage.setItem(baseKey,defaultRaw);
     return defaultRaw;
   }

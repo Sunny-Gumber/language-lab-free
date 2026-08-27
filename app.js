@@ -10,7 +10,6 @@
   }
 
   async function boot(){
-    // Supabase remains optional. Guest/offline learning must still work.
     try{
       await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js');
       await loadScript('./supabase-client.js');
@@ -26,27 +25,36 @@
 
     await loadScript('./languages.js');
 
-    // V7: course-quality corrections and expanded beginner foundations.
     try{
       await loadScript('./v7-content.js');
     }catch(error){
       console.warn('[Language Lab Free] Enhanced V7 course content unavailable; base course data remains available.',error);
     }
 
-    // V8: staged curricula. Japanese and Mandarin now span beginner through advanced tracks.
     try{
       await loadScript('./v8-content.js');
     }catch(error){
       console.warn('[Language Lab Free] V8 curriculum expansion unavailable; V7 content remains available.',error);
     }
 
+    try{
+      await loadScript('./v9-content.js');
+    }catch(error){
+      console.warn('[Language Lab Free] V9 integrated Japanese/Mandarin content unavailable; V8 curriculum remains available.',error);
+    }
+
     await loadScript('./app-core.js');
 
-    // V8: five-skill mastery uses numeric reserved keys inside the existing mastery JSON.
     try{
       await loadScript('./v8-skills.js');
     }catch(error){
       console.warn('[Language Lab Free] V8 skill profile unavailable; overall mastery still works.',error);
+    }
+
+    try{
+      await loadScript('./v9-course-ui.js');
+    }catch(error){
+      console.warn('[Language Lab Free] V9 deep lesson UI unavailable; standard course view remains available.',error);
     }
 
     try{

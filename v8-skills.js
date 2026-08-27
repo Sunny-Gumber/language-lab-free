@@ -8,7 +8,7 @@
     {id:'recall',icon:'🧠',label:'Recall',hint:'Retrieve meaning without prompts'},
     {id:'speaking',icon:'🎙️',label:'Speaking',hint:'Say the target clearly'}
   ];
-  const relevant={listening:'all',recognition:'all',writing:'items',recall:'vocab',speaking:'vocab'};
+  const relevant={listening:'all',recognition:'vocab',writing:'items',recall:'vocab',speaking:'vocab'};
 
   function key(native,skill){return `${PREFIX}${skill}__${encodeURIComponent(native)}`}
   function store(langId){
@@ -96,42 +96,48 @@
 
   function practice(skill){
     if(typeof lang==='undefined')return;const target=weakTarget(lang,skill);if(!target)return;
-    if(skill==='listening'||skill==='writing'||(skill==='recognition'&&target.type==='item')){
+    if(skill==='listening'||skill==='writing'){
       const pos=findItem(lang,target.native);if(pos){unitI=pos.ui;itemI=pos.ii;renderUnit()}
       document.querySelector(`[data-tab="${skill==='writing'?'write':'learn'}"]`)?.click();
       if(skill==='listening')document.getElementById('focusNative')?.scrollIntoView({behavior:'smooth',block:'center'});
       return;
     }
-    if(skill==='recognition'){document.querySelector('[data-tab="quiz"]')?.click();return}
+    if(skill==='recognition'){
+      const targetWord=lang.vocab.find(x=>x.native===target.native);document.querySelector('[data-tab="quiz"]')?.click();
+      if(targetWord&&typeof quiz!=='undefined'&&typeof renderQuiz==='function'){
+        const others=lang.vocab.filter(x=>x.native!==targetWord.native);quiz=[targetWord,...shuffle(others).slice(0,Math.min(9,others.length))];quizI=0;renderQuiz();
+      }
+      return;
+    }
     if(skill==='recall'){const i=lang.vocab.findIndex(x=>x.native===target.native);if(i>=0){cardOrder=lang.vocab.map((_,j)=>j);cardI=i;renderCard()}document.querySelector('[data-tab="cards"]')?.click();return}
     if(skill==='speaking'){const i=lang.vocab.findIndex(x=>x.native===target.native);if(i>=0){speakI=i;renderSpeak()}document.querySelector('[data-tab="speak"]')?.click()}
   }
 
   function hookPracticeEvents(){
-    document.getElementById('hearBtn')?.addEventListener('click',()=>setTimeout(()=>add(lang.id,curItem().native,'listening',6),0));
-    document.getElementById('slowBtn')?.addEventListener('click',()=>setTimeout(()=>add(lang.id,curItem().native,'listening',2),0));
-    document.getElementById('exampleBtn')?.addEventListener('click',()=>setTimeout(()=>add(lang.id,curItem().native,'listening',2),0));
-    document.getElementById('writeDoneBtn')?.addEventListener('click',()=>setTimeout(()=>{if((document.getElementById('writeFeedback')?.textContent||'').startsWith('Good'))add(lang.id,curItem().native,'writing',12)},0));
+    document.getElementById('hearBtn')?.addEventListener('click',()=>{const id=lang.id,native=curItem().native;setTimeout(()=>add(id,native,'listening',6),0)});
+    document.getElementById('slowBtn')?.addEventListener('click',()=>{const id=lang.id,native=curItem().native;setTimeout(()=>add(id,native,'listening',2),0)});
+    document.getElementById('exampleBtn')?.addEventListener('click',()=>{const id=lang.id,native=curItem().native;setTimeout(()=>add(id,native,'listening',2),0)});
+    document.getElementById('writeDoneBtn')?.addEventListener('click',()=>{const id=lang.id,native=curItem().native;setTimeout(()=>{if((document.getElementById('writeFeedback')?.textContent||'').startsWith('Good'))add(id,native,'writing',12)},0)});
 
     document.addEventListener('click',e=>{
-      const word=e.target.closest('[data-word]');if(word&&typeof lang!=='undefined'){const w=lang.vocab[Number(word.dataset.word)];if(w)add(lang.id,w.native,'listening',2)}
+      const word=e.target.closest('[data-word]');if(word&&typeof lang!=='undefined'){const id=lang.id,w=lang.vocab[Number(word.dataset.word)];if(w)add(id,w.native,'listening',2)}
       const answer=e.target.closest('[data-answer]');
       if(answer&&typeof quiz!=='undefined'&&typeof quizI!=='undefined'&&!quizAnswered&&quiz[quizI]){
-        const q=quiz[quizI],given=decodeURIComponent(answer.dataset.answer||'');if(given===q.meaning)setTimeout(()=>add(lang.id,q.native,'recognition',12),0);
+        const id=lang.id,q=quiz[quizI],given=decodeURIComponent(answer.dataset.answer||'');if(given===q.meaning)setTimeout(()=>add(id,q.native,'recognition',12),0);
       }
     },true);
 
     document.getElementById('cardGood')?.addEventListener('click',()=>{
-      try{const w=lang.vocab[cardOrder[cardI%cardOrder.length]];if(w)setTimeout(()=>add(lang.id,w.native,'recall',10),0)}catch{}
+      try{const id=lang.id,w=lang.vocab[cardOrder[cardI%cardOrder.length]];if(w)setTimeout(()=>add(id,w.native,'recall',10),0)}catch{}
     },true);
 
     const match=document.getElementById('matchText');if(match){let last='';new MutationObserver(()=>{
       const text=match.textContent||'';if(!/%$/.test(text)||text===last)return;last=text;const value=parseInt(text,10);if(!Number.isFinite(value)||typeof lang==='undefined')return;
-      const w=lang.vocab[speakI%lang.vocab.length];if(!w)return;add(lang.id,w.native,'speaking',value>=85?15:value>=60?8:2);if(value>=60)try{mastery(w.native,value>=85?6:3)}catch{}
+      const id=lang.id,w=lang.vocab[speakI%lang.vocab.length];if(!w)return;add(id,w.native,'speaking',value>=85?15:value>=60?8:2);if(value>=60)try{mastery(w.native,value>=85?6:3)}catch{}
     }).observe(match,{childList:true,characterData:true,subtree:true})}
 
     const build=document.getElementById('builderFeedback');if(build){new MutationObserver(()=>{
-      if((build.textContent||'')==='Correct!'&&typeof lang!=='undefined'){const w=lang.vocab[Math.min(1,lang.vocab.length-1)];if(w)add(lang.id,w.native,'recall',5)}
+      if((build.textContent||'')==='Correct!'&&typeof lang!=='undefined'){const id=lang.id,w=lang.vocab[Math.min(1,lang.vocab.length-1)];if(w)add(id,w.native,'recall',5)}
     }).observe(build,{childList:true,characterData:true,subtree:true})}
   }
 

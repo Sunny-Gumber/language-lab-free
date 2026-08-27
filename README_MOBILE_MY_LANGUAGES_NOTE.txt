@@ -1,0 +1,1 @@
+Mobile/My Languages patch: signed-in learners see only enabled languages, can add/remove/make primary, and coarse-pointer Android layouts force responsive single-column behavior. This note can be removed after release if desired.

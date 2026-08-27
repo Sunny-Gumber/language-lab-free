@@ -10,12 +10,19 @@
   }
 
   async function boot(){
-    // Supabase is optional in V5.1. Guest/offline learning must still work.
+    // Supabase remains optional. Guest/offline learning must still work.
     try{
       await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js');
       await loadScript('./supabase-client.js');
     }catch(error){
       console.warn('[Language Lab Free] Cloud layer unavailable; continuing in guest mode.',error);
+    }
+
+    // Authentication UI also supports guest mode when Supabase is unavailable.
+    try{
+      await loadScript('./auth.js');
+    }catch(error){
+      console.warn('[Language Lab Free] Account UI unavailable:',error);
     }
 
     await loadScript('./languages.js');

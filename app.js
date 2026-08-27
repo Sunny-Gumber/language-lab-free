@@ -69,18 +69,22 @@
       console.warn('[Language Lab Free] Guided learning layer unavailable; core learning remains available.',error);
     }
 
-    // Communication-first practice loads last so it can become the primary daily entry point without replacing V9 lessons.
     try{
       await loadScript('./v8-listen-speak.js');
     }catch(error){
       console.warn('[Language Lab Free] Listen & Speak practice unavailable; the full course remains available.',error);
     }
 
-    // Signed-in learners complete this once; language + voice preference are stored on their account.
     try{
       await loadScript('./onboarding.js');
     }catch(error){
       console.warn('[Language Lab Free] Learning-preference onboarding unavailable; the course remains usable.',error);
+    }
+
+    try{
+      await loadScript('./my-languages.js');
+    }catch(error){
+      console.warn('[Language Lab Free] My Languages manager unavailable; all courses remain accessible.',error);
     }
   }
 

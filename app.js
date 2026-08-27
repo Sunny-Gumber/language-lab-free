@@ -26,14 +26,28 @@
 
     await loadScript('./languages.js');
 
-    // V7: course-quality layer enriches/corrects language content before the learning engine renders it.
+    // V7: course-quality corrections and expanded beginner foundations.
     try{
       await loadScript('./v7-content.js');
     }catch(error){
       console.warn('[Language Lab Free] Enhanced V7 course content unavailable; base course data remains available.',error);
     }
 
+    // V8: staged curricula. Japanese and Mandarin now span beginner through advanced tracks.
+    try{
+      await loadScript('./v8-content.js');
+    }catch(error){
+      console.warn('[Language Lab Free] V8 curriculum expansion unavailable; V7 content remains available.',error);
+    }
+
     await loadScript('./app-core.js');
+
+    // V8: five-skill mastery uses numeric reserved keys inside the existing mastery JSON.
+    try{
+      await loadScript('./v8-skills.js');
+    }catch(error){
+      console.warn('[Language Lab Free] V8 skill profile unavailable; overall mastery still works.',error);
+    }
 
     try{
       await loadScript('./cloud-sync.js');

@@ -26,6 +26,12 @@ test('newer local profile preferences win before cloud upload',()=>{
   assert.deepEqual(result.enabledLanguages,['zh','ja']);
 });
 
+test('equal profile timestamps favor local unsynced preference',()=>{
+  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',profilePrefsUpdatedAt:'2026-08-27T12:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'auto',updated_at:'2026-08-27T12:00:00Z'},['ja','zh']);
+  assert.equal(result.source,'local');
+  assert.equal(result.selected,'zh');
+});
+
 test('newer remote profile preferences win on another device',()=>{
   const result=Core.resolveProfilePreferences({selected:'ja',enabledLanguages:['ja'],audioPreference:'auto',profilePrefsUpdatedAt:'2026-08-27T10:00:00Z'},{selected_language:'zh',enabled_languages:['zh','ja'],audio_preference:'female',onboarding_completed:true,updated_at:'2026-08-27T11:00:00Z'},['ja','zh']);
   assert.equal(result.source,'remote');

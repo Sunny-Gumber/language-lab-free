@@ -1,5 +1,5 @@
-const CACHE='language-lab-free-github-v2';
-const ASSETS=['./','./index.html','./styles.css','./app.js','./app-core.js','./languages.js','./supabase-client.js','./manifest.webmanifest'];
+const CACHE='language-lab-free-github-v3';
+const ASSETS=['./','./index.html','./styles.css','./auth.css','./app.js','./app-core.js','./languages.js','./supabase-client.js','./auth.js','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))));
 self.addEventListener('fetch',event=>{

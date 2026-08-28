@@ -1,10 +1,27 @@
-const fs=require('node:fs');
-const path=require('node:path');
-const cp=require('node:child_process');
-const root=path.resolve(__dirname,'..');
+import fs from'node:fs';
+import path from'node:path';
+import cp from'node:child_process';
+import{fileURLToPath}from'node:url';
+
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const skip=new Set(['node_modules','.git']);
 const files=[];
-function walk(dir){for(const name of fs.readdirSync(dir)){if(skip.has(name))continue;const full=path.join(dir,name),st=fs.statSync(full);if(st.isDirectory())walk(full);else if(name.endsWith('.js'))files.push(full)}}
+
+function walk(dir){
+  for(const name of fs.readdirSync(dir)){
+    if(skip.has(name))continue;
+    const full=path.join(dir,name),stat=fs.statSync(full);
+    if(stat.isDirectory())walk(full);
+    else if(name.endsWith('.js'))files.push(full);
+  }
+}
+
 walk(root);
-for(const file of files){const r=cp.spawnSync(process.execPath,['--check',file],{encoding:'utf8'});if(r.status!==0){process.stderr.write(`Syntax error: ${path.relative(root,file)}\n${r.stderr}`);process.exit(r.status||1)}}
+for(const file of files){
+  const result=cp.spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
+  if(result.status!==0){
+    process.stderr.write(`Syntax error: ${path.relative(root,file)}\n${result.stderr}`);
+    process.exit(result.status||1);
+  }
+}
 console.log(`Syntax OK: ${files.length} JavaScript files`);

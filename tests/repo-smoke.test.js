@@ -10,11 +10,11 @@ const exists=name=>fs.existsSync(path.join(root,name));
 
 test('index loads the V11 module entry point and required course data',()=>{
   const html=read('index.html');
-  assert.match(html,/name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/);
+  assert.match(html,/name="viewport"\s+content="width=device-width,\s*initial-scale=1,\s*viewport-fit=cover"/);
   assert.match(html,/<script type="module" src="\.\/app\.js"><\/script>/);
   for(const file of ['languages.js','v7-content.js','v8-content.js','v9-content.js','course-export.js']){
     assert.match(html,new RegExp(`src="\\.\\/${file.replaceAll('.','\\.')}"`));
-    assert.ok(exists(file),`Missing course runtime: ${file}`);
+    assert.ok(exists(file),`Missing course content layer: ${file}`);
   }
 });
 
@@ -55,6 +55,12 @@ test('manifest icon files exist',()=>{
   for(const icon of manifest.icons){
     const src=String(icon.src||'').replace(/^\.\//,'');
     assert.ok(src&&exists(src),`Missing manifest icon: ${src}`);
+  }
+});
+
+test('V11 database migrations are versioned in the repository',()=>{
+  for(const file of ['supabase/migrations/20260827_v11_event_learning_model.sql','supabase/migrations/20260828_v11_course_positions.sql']){
+    assert.ok(exists(file),`Missing V11 migration: ${file}`);
   }
 });
 

@@ -78,7 +78,11 @@ test('manifest icon files exist',()=>{
 });
 
 test('V11 database migrations are versioned in the repository',()=>{
-  for(const file of ['supabase/migrations/20260827_v11_event_learning_model.sql','supabase/migrations/20260828_v11_course_positions.sql'])assert.ok(exists(file),`Missing V11 migration: ${file}`);
+  for(const file of [
+    'supabase/migrations/20260827_v11_event_learning_model.sql',
+    'supabase/migrations/20260828_v11_course_positions.sql',
+    'supabase/migrations/20260828_v11_remove_legacy_progress_schema.sql'
+  ])assert.ok(exists(file),`Missing V11 migration: ${file}`);
 });
 
 test('top-level V11 entry no longer references legacy runtime modules',()=>{

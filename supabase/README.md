@@ -16,7 +16,7 @@ The frontend contains only the Supabase project URL and publishable browser key.
 
 ## Historical schema
 
-Older migrations for `language_progress` and `study_activity` remain in migration history so an existing project can reproduce its schema safely. The V11 frontend no longer uses those tables. A later contract migration can remove them after all clients have moved to V11.
+Older migrations remain in migration history so a database can be reproduced chronologically. The V11 contract migration removes the obsolete `language_progress` and `study_activity` tables plus snapshot XP/streak/selected-language profile columns. The active application no longer carries the old snapshot progress model.
 
 ## Migration order
 
@@ -24,3 +24,4 @@ Apply the files in `supabase/migrations/` in chronological order. The V11 additi
 
 - `20260827_v11_event_learning_model.sql`
 - `20260828_v11_course_positions.sql`
+- `20260828_v11_remove_legacy_progress_schema.sql`

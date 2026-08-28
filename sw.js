@@ -1,5 +1,4 @@
 const CACHE='language-lab-free-v11-2';
-const SUPABASE_REQUEST='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
 const SUPABASE_PINNED='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.min.js';
 const ASSETS=[
   './','./index.html','./styles.css','./app.js','./manifest.webmanifest','./icon.svg',
@@ -12,7 +11,7 @@ const STATIC_PATHS=new Set(ASSETS.map(asset=>new URL(asset,self.location.href).p
 async function cacheSupabaseRuntime(cache){
   try{
     const response=await fetch(SUPABASE_PINNED,{mode:'cors'});
-    if(response.ok)await cache.put(SUPABASE_REQUEST,response.clone());
+    if(response.ok)await cache.put(SUPABASE_PINNED,response.clone());
   }catch(error){console.warn('[Language Lab] Supabase runtime was not pre-cached',error)}
 }
 
@@ -32,13 +31,13 @@ self.addEventListener('fetch',event=>{
   if(request.method!=='GET')return;
   const url=new URL(request.url);
 
-  if(request.url===SUPABASE_REQUEST){
+  if(request.url===SUPABASE_PINNED){
     event.respondWith(caches.open(CACHE).then(async cache=>{
-      const cached=await cache.match(SUPABASE_REQUEST);
+      const cached=await cache.match(SUPABASE_PINNED);
       if(cached)return cached;
       try{
         const response=await fetch(SUPABASE_PINNED,{mode:'cors'});
-        if(response.ok)await cache.put(SUPABASE_REQUEST,response.clone());
+        if(response.ok)await cache.put(SUPABASE_PINNED,response.clone());
         return response;
       }catch{return Response.error()}
     }));

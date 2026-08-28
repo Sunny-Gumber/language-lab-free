@@ -7,6 +7,7 @@ import{fileURLToPath}from'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=name=>fs.readFileSync(path.join(root,name),'utf8');
 const exists=name=>fs.existsSync(path.join(root,name));
+const srcModules=()=>fs.readdirSync(path.join(root,'src')).filter(name=>name.endsWith('.js'));
 
 test('index loads the V11 module entry point and required course data',()=>{
   const html=read('index.html');
@@ -19,8 +20,7 @@ test('index loads the V11 module entry point and required course data',()=>{
 });
 
 test('every relative ES-module import resolves to a file',()=>{
-  const srcDir=path.join(root,'src');
-  const modules=fs.readdirSync(srcDir).filter(name=>name.endsWith('.js'));
+  const srcDir=path.join(root,'src'),modules=srcModules();
   assert.ok(modules.length>=10);
   for(const module of modules){
     const code=read(path.join('src',module));
@@ -31,8 +31,24 @@ test('every relative ES-module import resolves to a file',()=>{
   }
 });
 
+test('literal DOM ids used by modules exist and page ids are unique',()=>{
+  const html=read('index.html');
+  const pageIds=[...html.matchAll(/\sid="([^"]+)"/g)].map(match=>match[1]);
+  const duplicates=pageIds.filter((id,index)=>pageIds.indexOf(id)!==index);
+  assert.deepEqual([...new Set(duplicates)],[],`Duplicate ids: ${[...new Set(duplicates)].join(', ')}`);
+  const known=new Set(pageIds);
+  for(const module of srcModules()){
+    const code=read(path.join('src',module));
+    const refs=new Set([
+      ...[...code.matchAll(/\$\(['"]([^'"]+)['"]\)/g)].map(match=>match[1]),
+      ...[...code.matchAll(/getElementById\(['"]([^'"]+)['"]\)/g)].map(match=>match[1])
+    ]);
+    for(const id of refs)assert.ok(known.has(id),`${module} references missing DOM id #${id}`);
+  }
+});
+
 test('clean modules do not monkey-patch functions or inject CSS',()=>{
-  const code=fs.readdirSync(path.join(root,'src')).filter(name=>name.endsWith('.js')).map(name=>read(path.join('src',name))).join('\n');
+  const code=srcModules().map(name=>read(path.join('src',name))).join('\n');
   assert.equal(code.includes("createElement('style')"),false);
   assert.equal(code.includes('cloneNode('),false);
   assert.equal(code.includes('window.speak='),false);
@@ -59,14 +75,10 @@ test('manifest icon files exist',()=>{
 });
 
 test('V11 database migrations are versioned in the repository',()=>{
-  for(const file of ['supabase/migrations/20260827_v11_event_learning_model.sql','supabase/migrations/20260828_v11_course_positions.sql']){
-    assert.ok(exists(file),`Missing V11 migration: ${file}`);
-  }
+  for(const file of ['supabase/migrations/20260827_v11_event_learning_model.sql','supabase/migrations/20260828_v11_course_positions.sql'])assert.ok(exists(file),`Missing V11 migration: ${file}`);
 });
 
 test('top-level V11 entry no longer references legacy runtime modules',()=>{
   const runtime=read('index.html')+'\n'+read('app.js')+'\n'+read('sw.js');
-  for(const old of ['app-core.js','auth.js','auth.css','cloud-sync-v10.js','core-logic.js','storage-scope.js','skills-v10.js','v6-learning.js','v8-listen-speak.js','v9-course-ui.js','v10-hardening.js','onboarding-v10.js','my-languages-v10.js','supabase-client.js']){
-    assert.equal(runtime.includes(old),false,`Legacy runtime still referenced: ${old}`);
-  }
+  for(const old of ['app-core.js','auth.js','auth.css','cloud-sync-v10.js','core-logic.js','storage-scope.js','skills-v10.js','v6-learning.js','v8-listen-speak.js','v9-course-ui.js','v10-hardening.js','onboarding-v10.js','my-languages-v10.js','supabase-client.js'])assert.equal(runtime.includes(old),false,`Legacy runtime still referenced: ${old}`);
 });

@@ -132,7 +132,7 @@
           <div id="practiceBody" class="practice-body"></div>
         </article>
       </div>
-      <article class="card"><div class="section-head compact"><div><h2>Skill profile</h2><p>Mastery includes unpracticed course targets as zero; coverage shows how much you have attempted.</p></div></div><div id="skillGrid" class="skill-grid"></div></article>
+      <article class="card"><div class="section-head compact"><div><h2>Skill profile</h2><p>Mastery includes unpracticed assessed targets as zero; coverage shows how much you have attempted. Writing is tracked as practice coverage, not handwriting accuracy.</p></div></div><div id="skillGrid" class="skill-grid"></div></article>
     </section>
 
     <section id="learnTab" class="panel">
@@ -183,8 +183,8 @@
 
     <section id="progressTab" class="panel">
       <div class="stats-grid"><article class="card stat"><span>Language XP</span><strong id="langXp">0</strong></article><article class="card stat"><span>Active attempts</span><strong id="attemptsStat">0</strong></article><article class="card stat"><span>Quiz accuracy</span><strong id="quizStat">0%</strong></article><article class="card stat"><span>Favorites</span><strong id="favStat">0</strong></article></div>
-      <article class="card"><div class="section-head compact"><div><h2>Five-skill progress</h2><p>Listening and speaking carry most of the overall learning weight.</p></div></div><div id="progressSkillGrid" class="skill-grid"></div></article>
-      <article class="card progress-card"><div class="section-head compact"><div><h2>Course map</h2><p>Unit progress is derived from active attempts, not button taps.</p></div><button id="resetCourseBtn" class="danger small" type="button">Reset this course</button></div><div id="masteryList"></div></article>
+      <article class="card"><div class="section-head compact"><div><h2>Five-skill progress</h2><p>Listening, speaking, recognition and recall are assessed. Writing shows practice coverage until handwriting assessment is added.</p></div></div><div id="progressSkillGrid" class="skill-grid"></div></article>
+      <article class="card progress-card"><div class="section-head compact"><div><h2>Course map</h2><p>Unit progress is derived from assessed active attempts, not passive button taps.</p></div><button id="resetCourseBtn" class="danger small" type="button">Reset this course</button></div><div id="masteryList"></div></article>
     </section>
   </section>
 </main>
@@ -202,7 +202,7 @@
 <script src="./v8-content.js"></script>
 <script src="./v9-content.js"></script>
 <script src="./course-export.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.min.js"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

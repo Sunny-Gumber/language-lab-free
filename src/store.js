@@ -22,6 +22,7 @@ function defaultState(nextScope='guest'){
     ui:{
       currentLanguage:'ja',
       positions:{},
+      positionDirty:{},
       exactVoices:{},
       activeStage:{},
       practiceMode:'listen'
@@ -48,9 +49,12 @@ function normalize(input,nextScope=scope){
 
   const ui={...base.ui,...(value.ui||{})};
   ui.currentLanguage=courseCodes.includes(ui.currentLanguage)?ui.currentLanguage:primary;
+  if(nextScope!=='guest'&&!prefs.enabledLanguages.includes(ui.currentLanguage))ui.currentLanguage=primary;
   ui.positions=ui.positions&&typeof ui.positions==='object'?ui.positions:{};
+  ui.positionDirty=ui.positionDirty&&typeof ui.positionDirty==='object'?ui.positionDirty:{};
   ui.exactVoices=ui.exactVoices&&typeof ui.exactVoices==='object'?ui.exactVoices:{};
   ui.activeStage=ui.activeStage&&typeof ui.activeStage==='object'?ui.activeStage:{};
+  ui.practiceMode=['listen','shadow','meaning','conversation'].includes(ui.practiceMode)?ui.practiceMode:'listen';
 
   const events=Array.isArray(value.events)?value.events.filter(event=>event&&event.id):[];
   return{version:VERSION,prefs,ui,events};
@@ -82,7 +86,9 @@ export function initializeStore(){
   window.addEventListener('storage',event=>{
     if(event.key!==key())return;
     state=normalize(safeJson(event.newValue,null),scope);
-    for(const listener of listeners)listener(state,'storage');
+    for(const listener of listeners){
+      try{listener(state,'storage')}catch(error){console.error('[Language Lab] storage listener failed',error)}
+    }
   });
   return state;
 }
@@ -100,10 +106,7 @@ export function setScope(nextScope){
   return state;
 }
 
-export function subscribe(listener){
-  listeners.add(listener);
-  return()=>listeners.delete(listener);
-}
+export function subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener)}
 
 export function updatePrefs(patch,{dirty=true}={}){
   const current=getState();
@@ -148,13 +151,48 @@ export function updateUi(patch,reason='ui'){
 }
 
 export function setPosition(languageCode,unitIndex,itemIndex){
+  if(!courseCodes.includes(languageCode))return;
   const current=getState();
-  current.ui.positions[languageCode]={unitIndex:Number(unitIndex)||0,itemIndex:Number(itemIndex)||0};
+  const next={unitIndex:Math.max(0,Number(unitIndex)||0),itemIndex:Math.max(0,Number(itemIndex)||0)};
+  const previous=current.ui.positions[languageCode];
   current.ui.currentLanguage=languageCode;
+  if(previous?.unitIndex===next.unitIndex&&previous?.itemIndex===next.itemIndex){emit('ui');return}
+  current.ui.positions[languageCode]=next;
+  if(scope!=='guest')current.ui.positionDirty[languageCode]=true;
   emit('position');
 }
 
 export function getPosition(languageCode){return getState().ui.positions[languageCode]||{unitIndex:0,itemIndex:0}}
+
+export function dirtyPositions(){
+  const current=getState();
+  return Object.keys(current.ui.positionDirty||{}).filter(code=>current.ui.positionDirty[code]&&current.ui.positions[code]).map(code=>({languageCode:code,...current.ui.positions[code]}));
+}
+
+export function markPositionsSynced(languageCodes){
+  const current=getState();
+  let changed=false;
+  for(const code of languageCodes||[]){
+    if(current.ui.positionDirty?.[code]){delete current.ui.positionDirty[code];changed=true}
+  }
+  if(changed)emit('positions-synced');
+}
+
+export function applyRemotePositions(rows){
+  const current=getState();
+  let changed=false;
+  for(const row of rows||[]){
+    const code=row.language_code||row.languageCode;
+    if(!courseCodes.includes(code)||current.ui.positionDirty?.[code])continue;
+    const next={unitIndex:Math.max(0,Number(row.unit_index??row.unitIndex)||0),itemIndex:Math.max(0,Number(row.item_index??row.itemIndex)||0)};
+    const previous=current.ui.positions[code];
+    if(previous?.unitIndex===next.unitIndex&&previous?.itemIndex===next.itemIndex)continue;
+    current.ui.positions[code]=next;
+    changed=true;
+  }
+  if(changed)emit('remote-positions');
+  return changed;
+}
 
 export function recordEvent(event){
   const current=getState();
@@ -201,8 +239,14 @@ export function markEventsSynced(ids){
 
 export function resetLearning(languageCode=null){
   const current=getState();
-  current.events=languageCode?current.events.filter(event=>event.languageCode!==languageCode):[];
-  if(languageCode)delete current.ui.positions[languageCode];
-  else current.ui.positions={};
+  if(languageCode){
+    current.events=current.events.filter(event=>(event.languageCode||event.language_code)!==languageCode);
+    current.ui.positions[languageCode]={unitIndex:0,itemIndex:0};
+    if(scope!=='guest')current.ui.positionDirty[languageCode]=true;
+  }else{
+    current.events=[];
+    current.ui.positions={};
+    current.ui.positionDirty={};
+  }
   emit('reset');
 }

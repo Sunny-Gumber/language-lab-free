@@ -2,12 +2,15 @@
 // Expands course depth and corrects beginner teaching issues without changing the V6 engine.
 (function(){
   if(typeof LANGUAGES==='undefined') return;
-  const I=(native,roman,pron,guide,example,extra={})=>({
-    native,roman,pron,guide,
-    steps:extra.steps||['Study the model carefully','Trace or copy once','Hide the guide and reproduce from memory'],
-    example:{native:example[0],roman:example[1],meaning:example[2]},
-    ...extra
-  });
+  const I=(native,roman,pron,guide,example,extra={})=>{
+    const sample=Array.isArray(example)?example:[];
+    return{
+      native,roman,pron,guide,
+      steps:extra.steps||['Study the model carefully','Trace or copy once','Hide the guide and reproduce from memory'],
+      example:{native:sample[0]||'',roman:sample[1]||'',meaning:sample[2]||''},
+      ...extra
+    };
+  };
   const W=(native,roman,meaning)=>({native,roman,meaning});
   const by=id=>LANGUAGES.find(l=>l.id===id);
   const mergeVocab=(lang,items)=>{const seen=new Set();lang.vocab=[...(lang.vocab||[]),...items].filter(v=>{const k=v.native.toLowerCase();if(seen.has(k))return false;seen.add(k);return true})};
@@ -120,7 +123,7 @@
         I('cat','cat','/kæt/ — short a','Focus on /æ/, not the letter name A.',['cat','cat','a cat']),I('cut','cut','/kʌt/ — central vowel','Contrast it with cat.',['cut','cut','to cut']),I('sit','sit','/sɪt/ — short i','Keep it shorter and more relaxed than “seat”.',['sit','sit','to sit']),I('seat','seat','/siːt/ — long ee','Hold the vowel longer than in sit.',['seat','seat','a seat']),I('think','think','/θɪŋk/','Place the tongue lightly between the teeth for /θ/.',['I think so.','I think so','I believe so'])
       ]},
       {title:'Everyday Introductions',goal:'Introduce yourself and ask simple questions naturally.',items:[
-        I('Hello','hello','HEL-lo','Stress the first syllable lightly.',['Hello, how are you?','hello, how are you','Greeting']),I('My name is ___','my name is','Natural introduction phrase','In conversation, “I’m ___” is also very common.',['My name is Sunny.','my name is Sunny','Introduce your name']),I('I am from ___','I am from','Say the country/place after from.',['I am from India.','I am from India','Say where you are from']),I('What is your name?','what is your name','Question intonation','In speech, “What’s your name?” is common.',['What is your name?','what is your name','Ask someone’s name']),I('Nice to meet you.','nice to meet you','Polite first-meeting phrase','Stress “nice” and “meet” naturally rather than every word equally.',['Nice to meet you, too.','nice to meet you too','Reply to an introduction'])
+        I('Hello','hello','HEL-lo','Stress the first syllable lightly.',['Hello, how are you?','hello, how are you','Greeting']),I('My name is ___','my name is','Natural introduction phrase','In conversation, “I’m ___” is also very common.',['My name is Sunny.','my name is Sunny','Introduce your name']),I('I am from ___','I am from','Natural origin phrase','Put a country or place after “from”.',['I am from India.','I am from India','Say where you are from']),I('What is your name?','what is your name','Question intonation','In speech, “What’s your name?” is common.',['What is your name?','what is your name','Ask someone’s name']),I('Nice to meet you.','nice to meet you','Polite first-meeting phrase','Stress “nice” and “meet” naturally rather than every word equally.',['Nice to meet you, too.','nice to meet you too','Reply to an introduction'])
       ]}
     ];
     mergeVocab(en,[W('Sorry','sorry','Apology'),W('Excuse me','excuse me','Get attention / pass politely'),W('Where?','where','Ask about place'),W('What?','what','Ask about a thing'),W('Who?','who','Ask about a person'),W('Today','today','Current day'),W('Tomorrow','tomorrow','Next day'),W('Eat','eat','consume food'),W('Drink','drink','consume a beverage'),W('Go','go','move to another place'),W('Work','work','job / activity'),W('School','school','place of education')]);

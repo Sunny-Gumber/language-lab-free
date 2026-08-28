@@ -1,21 +1,26 @@
-# Supabase foundation
+# Supabase schema
 
-V5.1 adds the cloud data foundation for Language Lab Free.
+Language Lab Free uses Supabase for signed-in account preferences and additive learning-event synchronization.
 
-## Project
-- Supabase project: `language-lab-free`
-- Browser integration uses only the project URL and publishable key.
-- Never commit service-role keys, database passwords, OAuth client secrets, or other private credentials.
+## Active V11 tables
 
-## Tables
-- `profiles` — learner profile, timezone, XP and streak summary
-- `language_progress` — per-language position, mastery, favorites and quiz/writing counters
-- `study_activity` — one daily activity row per learner for streak/history calculations
+- `profiles` — display metadata, timezone, primary/enabled languages, audio preference, daily XP goal and onboarding state
+- `learning_events` — unique practice/favorite/reset events used to derive XP, streak, mastery, coverage and review state
+- `course_positions` — exact last unit/item for each language
 
 ## Security
-Row Level Security is enabled on all V5.1 tables. Authenticated users can only select/insert/update/delete rows that belong to their own `auth.uid()`.
 
-## Frontend behavior in V5.1
-Supabase is loaded as an optional cloud layer. If the SDK/network is unavailable, the existing guest/localStorage learning experience continues to work.
+Row Level Security is enabled on V11 user-owned tables. Policies restrict reads and writes to rows where `auth.uid()` matches `user_id` (or the profile `id`).
 
-Authentication UI and cloud synchronization are intentionally deferred to V5.2 and V5.3.
+The frontend contains only the Supabase project URL and publishable browser key. Never commit a service-role key, database password or OAuth client secret.
+
+## Historical schema
+
+Older migrations for `language_progress` and `study_activity` remain in migration history so an existing project can reproduce its schema safely. The V11 frontend no longer uses those tables. A later contract migration can remove them after all clients have moved to V11.
+
+## Migration order
+
+Apply the files in `supabase/migrations/` in chronological order. The V11 additions are:
+
+- `20260827_v11_event_learning_model.sql`
+- `20260828_v11_course_positions.sql`

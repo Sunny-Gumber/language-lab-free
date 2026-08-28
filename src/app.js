@@ -29,41 +29,33 @@ async function registerServiceWorker(){
 }
 
 async function boot(){
-  initializeStore();
+  await initializeStore();
 
   const practice=new PracticeController();
   const course=new CourseController(practice);
   const account=new AccountUi();
-  const home=new HomeController({
-    openCourse:code=>course.open(code,{tab:'learn'}),
-    openPractice:code=>course.openPractice(code)
-  });
+  const home=new HomeController({openCourse:code=>course.open(code,{tab:'learn'}),openPractice:code=>course.openPractice(code)});
 
   subscribe(()=>scheduleRender(home,account,course,practice));
   subscribeStatus(status=>{$('syncStatus').textContent=status});
   subscribeAuth(()=>{
     account.checkOnboarding();
+    account.offerGuestImport().catch(error=>console.warn('[Language Lab] Guest import check failed',error));
     scheduleRender(home,account,course,practice);
   });
   window.addEventListener('language-lab-home-requested',()=>home.render());
   window.addEventListener('language-lab-cloud-synced',()=>scheduleRender(home,account,course,practice));
 
-  home.render();
-  account.renderAccountButton();
+  home.render();account.renderAccountButton();
   await initializeCloud();
   account.checkOnboarding();
+  await account.offerGuestImport();
   home.render();
 
   if(isSignedIn()&&getState().prefs.dirty)syncNow('boot').catch(()=>{});
   registerServiceWorker();
 
-  // Expose a tiny read-only debug surface instead of dozens of global runtime functions.
-  window.LanguageLab={
-    version:11,
-    getState:()=>structuredClone(getState()),
-    user:()=>getUser(),
-    sync:()=>syncNow('manual')
-  };
+  window.LanguageLab={version:'11.2',getState:()=>structuredClone(getState()),user:()=>getUser(),sync:()=>syncNow('manual')};
 }
 
 boot().catch(error=>{

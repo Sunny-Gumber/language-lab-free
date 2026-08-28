@@ -1,4 +1,4 @@
-const CACHE='language-lab-free-v11-1';
+const CACHE='language-lab-free-v11-2';
 const ASSETS=[
   './','./index.html','./styles.css','./app.js','./manifest.webmanifest','./icon.svg',
   './languages.js','./v7-content.js','./v8-content.js','./v9-content.js','./course-export.js',
@@ -12,11 +12,7 @@ self.addEventListener('install',event=>{
 });
 
 self.addEventListener('activate',event=>{
-  event.waitUntil(
-    caches.keys()
-      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
-      .then(()=>self.clients.claim())
-  );
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
 });
 
 self.addEventListener('fetch',event=>{
@@ -24,24 +20,16 @@ self.addEventListener('fetch',event=>{
   if(request.method!=='GET')return;
   const url=new URL(request.url);
   if(url.origin!==self.location.origin)return;
-
   const navigation=request.mode==='navigate';
   if(!navigation&&!STATIC_PATHS.has(url.pathname))return;
 
-  event.respondWith(
-    fetch(request)
-      .then(response=>{
-        if(response.ok&&response.type==='basic'){
-          const copy=response.clone();
-          caches.open(CACHE).then(cache=>cache.put(request,copy));
-        }
-        return response;
-      })
-      .catch(async()=>{
-        const cached=await caches.match(request);
-        if(cached)return cached;
-        if(navigation)return caches.match('./index.html');
-        return Response.error();
-      })
-  );
+  event.respondWith(fetch(request).then(response=>{
+    if(response.ok&&response.type==='basic')caches.open(CACHE).then(cache=>cache.put(request,response.clone()));
+    return response;
+  }).catch(async()=>{
+    const cached=await caches.match(request);
+    if(cached)return cached;
+    if(navigation)return caches.match('./index.html');
+    return Response.error();
+  }));
 });

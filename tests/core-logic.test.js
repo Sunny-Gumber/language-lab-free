@@ -1,54 +1,38 @@
-const test=require('node:test');
-const assert=require('node:assert/strict');
-const Core=require('../core-logic.js');
+import test from'node:test';
+import assert from'node:assert/strict';
+import{clamp,daysBetween,deepEqual,escapeHtml,hashString,normalizeText,similarity,todayLocal,unique}from'../src/utils.js';
 
-test('studyDate uses the local calendar date',()=>{
-  assert.equal(Core.studyDate(new Date(2026,7,27,23,59,0)),'2026-08-27');
+test('todayLocal uses calendar fields without UTC conversion',()=>{
+  assert.equal(todayLocal(new Date(2026,7,28,0,5,0)),'2026-08-28');
 });
 
-test('daysBetween compares date-only values safely',()=>{
-  assert.equal(Core.daysBetween('2026-08-27','2026-08-28'),1);
-  assert.equal(Core.daysBetween('2026-08-28','2026-08-27'),-1);
+test('daysBetween handles date-only values deterministically',()=>{
+  assert.equal(daysBetween('2026-08-27','2026-08-28'),1);
+  assert.equal(daysBetween('2026-08-28','2026-08-27'),-1);
 });
 
-test('enabled languages are unique, valid and include primary',()=>{
-  assert.deepEqual(Core.normalizeEnabledLanguages(['zh','zh','bad'],'ja',['ja','zh','ko']),['ja','zh']);
+test('clamp protects score boundaries',()=>{
+  assert.equal(clamp(130),100);
+  assert.equal(clamp(-8),0);
+  assert.equal(clamp(.75,0,1),.75);
 });
 
-test('mastery merge never lowers progress',()=>{
-  assert.deepEqual(Core.mergeMastery({a:80,b:10},{a:70,b:25,c:4}),{a:80,b:25,c:4});
+test('normalizeText and similarity handle punctuation and spacing',()=>{
+  assert.equal(normalizeText('你 好！'),'你好');
+  assert.equal(similarity('Hello!',' hello '),1);
+  assert.ok(similarity('konnichiwa','konichiwa')>.8);
 });
 
-test('newer local profile preferences win before cloud upload',()=>{
-  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',onboardingCompleted:true,profilePrefsUpdatedAt:'2026-08-27T12:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'male',onboarding_completed:true,learning_preferences_updated_at:'2026-08-27T11:00:00Z'},['ja','zh']);
-  assert.equal(result.source,'local');
-  assert.equal(result.selected,'zh');
-  assert.deepEqual(result.enabledLanguages,['zh','ja']);
+test('escapeHtml protects generated content',()=>{
+  assert.equal(escapeHtml('<b>"x"</b>'),'&lt;b&gt;&quot;x&quot;&lt;/b&gt;');
 });
 
-test('equal preference timestamps favor local state',()=>{
-  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',profilePrefsUpdatedAt:'2026-08-27T12:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'auto',learning_preferences_updated_at:'2026-08-27T12:00:00Z'},['ja','zh']);
-  assert.equal(result.source,'local');
-  assert.equal(result.selected,'zh');
+test('hashString is stable and unique removes duplicates',()=>{
+  assert.equal(hashString('Language Lab'),hashString('Language Lab'));
+  assert.deepEqual(unique(['ja','zh','ja']),['ja','zh']);
 });
 
-test('dirty local preferences win even when remote preference timestamp is newer',()=>{
-  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',profilePrefsDirty:true,profilePrefsUpdatedAt:'2026-08-27T10:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'auto',learning_preferences_updated_at:'2026-08-27T13:00:00Z'},['ja','zh']);
-  assert.equal(result.source,'local');
-  assert.equal(result.selected,'zh');
-  assert.equal(result.profilePrefsDirty,true);
-});
-
-test('unrelated profile updated_at does not override a newer local preference timestamp',()=>{
-  const result=Core.resolveProfilePreferences({selected:'zh',enabledLanguages:['zh','ja'],audioPreference:'female',profilePrefsUpdatedAt:'2026-08-27T12:00:00Z'},{selected_language:'ja',enabled_languages:['ja'],audio_preference:'auto',learning_preferences_updated_at:'2026-08-27T11:00:00Z',updated_at:'2026-08-27T14:00:00Z'},['ja','zh']);
-  assert.equal(result.source,'local');
-  assert.equal(result.selected,'zh');
-});
-
-test('newer remote learning preference timestamp wins on another device',()=>{
-  const result=Core.resolveProfilePreferences({selected:'ja',enabledLanguages:['ja'],audioPreference:'auto',profilePrefsUpdatedAt:'2026-08-27T10:00:00Z'},{selected_language:'zh',enabled_languages:['zh','ja'],audio_preference:'female',onboarding_completed:true,learning_preferences_updated_at:'2026-08-27T11:00:00Z',updated_at:'2026-08-27T12:00:00Z'},['ja','zh']);
-  assert.equal(result.source,'remote');
-  assert.equal(result.selected,'zh');
-  assert.deepEqual(result.enabledLanguages,['zh','ja']);
-  assert.equal(result.audioPreference,'female');
+test('deepEqual ignores object key order but not values',()=>{
+  assert.equal(deepEqual({a:1,b:{x:2}},{b:{x:2},a:1}),true);
+  assert.equal(deepEqual({a:1},{a:2}),false);
 });

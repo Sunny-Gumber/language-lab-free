@@ -3,8 +3,8 @@ export async function blockExternal(page){
   await page.route('https://ykaluwgryohxcsccdacf.supabase.co/**',route=>route.abort());
 }
 
-export async function installMockSupabase(page,{profile={},events=[],positions=[],user={}}={}){
-  await page.addInitScript(({profile,events,positions,user})=>{
+export async function installMockSupabase(page,{profile={},events=[],positions=[],user={},signedIn=true}={}){
+  await page.addInitScript(({profile,events,positions,user,signedIn})=>{
     const clone=value=>JSON.parse(JSON.stringify(value));
     const now=()=>new Date().toISOString();
     const mockUser={id:'e2e-user',email:'learner@example.com',user_metadata:{name:'E2E Learner'},...user};
@@ -54,10 +54,8 @@ export async function installMockSupabase(page,{profile={},events=[],positions=[
           if(table==='course_positions')for(const row of list){
             const incoming={...clone(row),client_updated_at:row.client_updated_at||now()};
             const index=backend.positions.findIndex(existing=>existing.user_id===row.user_id&&existing.language_code===row.language_code);
-            if(index>=0){
-              const existing=backend.positions[index];
-              if(String(incoming.client_updated_at)>=String(existing.client_updated_at||''))backend.positions[index]={...existing,...incoming,updated_at:now()};
-            }else backend.positions.push({...incoming,updated_at:now()});
+            if(index>=0){const existing=backend.positions[index];if(String(incoming.client_updated_at)>=String(existing.client_updated_at||''))backend.positions[index]={...existing,...incoming,updated_at:now()}}
+            else backend.positions.push({...incoming,updated_at:now()});
           }
           return Promise.resolve({data:null,error:null});
         },
@@ -66,19 +64,21 @@ export async function installMockSupabase(page,{profile={},events=[],positions=[
       return builder;
     }
 
-    let authListener=null;
+    let authListener=null,currentSession=signedIn?{user:mockUser}:null;
     const client={
       auth:{
-        getSession:async()=>({data:{session:{user:mockUser}},error:null}),
+        getSession:async()=>({data:{session:currentSession},error:null}),
         onAuthStateChange:listener=>{authListener=listener;return{data:{subscription:{unsubscribe(){}}}}},
-        signOut:async()=>({error:null}),
+        signOut:async()=>{currentSession=null;authListener?.('SIGNED_OUT',null);return{error:null}},
         signInWithOAuth:async()=>({data:{url:'about:blank#mock-oauth'},error:null})
       },
       from:table=>builderFor(table),
       channel:()=>({on(){return this},subscribe(){return this}}),
       removeChannel(){},
-      __emitAuth(event,session){authListener?.(event,session)}
+      __emitAuth(event,nextSession){currentSession=nextSession;authListener?.(event,nextSession)},
+      __user:mockUser
     };
+    window.__mockSupabaseClient=client;
     window.supabase={createClient:()=>client};
-  },{profile,events,positions,user});
+  },{profile,events,positions,user,signedIn});
 }

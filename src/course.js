@@ -1,7 +1,7 @@
 import{availableStages,findItem,getCourse,getItem,getUnit,stageForUnit}from'./data.js';
-import{deleteCloudLearning,isSignedIn}from'./cloud.js';
-import{favoriteIds,learningEvents,mastery,recordPractice,resetLearning as unusedReset,SKILLS,skillStats,setFavorite,stageMastery,totalXp,unitMastery,weakestTarget}from'./learning.js';
-import{getPosition,getState,resetLearning,setPosition}from'./store.js';
+import{syncNow}from'./cloud.js';
+import{favoriteIds,learningEvents,recordPractice,SKILLS,skillStats,setFavorite,stageMastery,totalXp,unitMastery,weakestTarget}from'./learning.js';
+import{getPosition,resetLearning,setPosition}from'./store.js';
 import{speak}from'./audio.js';
 import{escapeHtml,shuffle}from'./utils.js';
 import{WritingPad}from'./writing.js';
@@ -187,7 +187,8 @@ export class CourseController{
   }
 
   reviewWeakestItem(){
-    const target=weakestTarget(this.course.id,'writing',stageForUnit(this.course,this.unitIndex)?.id)||weakestTarget(this.course.id,'listening',stageForUnit(this.course,this.unitIndex)?.id);
+    const stageId=stageForUnit(this.course,this.unitIndex)?.id;
+    const target=weakestTarget(this.course.id,'listening',stageId)||weakestTarget(this.course.id,'writing',stageId);
     const match=target?findItem(this.course,target.id):null;
     if(!match)return;
     this.unitIndex=match.unitIndex;
@@ -240,8 +241,8 @@ export class CourseController{
 
   recordWriting(){
     if(!this.writingPad.hasPractice()){$('writeFeedback').textContent='Practice the full form first.';return}
-    recordPractice({languageCode:this.course.id,targetId:this.item.id,skill:'writing',score:70,xp:3,metadata:{measurement:'practice-effort'}});
-    $('writeFeedback').textContent='Practice recorded. This is effort tracking, not handwriting accuracy.';
+    recordPractice({languageCode:this.course.id,targetId:this.item.id,skill:'writing',score:null,xp:2,metadata:{measurement:'practice-effort',assessed:false}});
+    $('writeFeedback').textContent='Practice recorded as effort/coverage. Handwriting accuracy is not scored.';
     this.writingPad.clear();
   }
 
@@ -373,8 +374,8 @@ export class CourseController{
     $('quizStat').textContent=quizEvents.length?`${Math.round(quizCorrect/quizEvents.length*100)}%`:'0%';
     $('favStat').textContent=favoriteIds(this.course.id).size;
     const skillHtml=SKILLS.map(skill=>{
-      const stats=skillStats(this.course.id,skill.id);
-      return`<div class="skill-card"><span>${skill.icon} ${skill.label}</span><strong>${stats.mastery}%</strong><div class="progressbar"><span style="width:${stats.mastery}%"></span></div><small>${stats.attempted}/${stats.total} practiced · ${stats.coverage}% coverage</small></div>`;
+      const stats=skillStats(this.course.id,skill.id),bar=stats.assessed?stats.mastery:stats.coverage,label=stats.assessed?`${stats.mastery}%`:'Practice';
+      return`<div class="skill-card"><span>${skill.icon} ${skill.label}</span><strong>${label}</strong><div class="progressbar"><span style="width:${bar}%"></span></div><small>${stats.attempted}/${stats.total} practiced · ${stats.coverage}% coverage${stats.assessed?'':' · not accuracy-scored'}</small></div>`;
     }).join('');
     $('progressSkillGrid').innerHTML=skillHtml;
     $('masteryList').innerHTML=this.course.units.map((unit,index)=>`<button class="mastery-row" data-progress-unit="${index}" type="button"><div><b>Unit ${index+1}</b><small>${escapeHtml(unit.title)}</small></div><div class="mastery-bar"><span style="width:${unitMastery(this.course.id,unit)}%"></span></div><strong>${unitMastery(this.course.id,unit)}%</strong></button>`).join('');
@@ -388,11 +389,9 @@ export class CourseController{
   }
 
   async resetCourse(){
-    if(!confirm(`Reset all ${this.course.name} test progress?`))return;
+    if(!confirm(`Reset all ${this.course.name} learning progress?`))return;
     resetLearning(this.course.id);
-    if(isSignedIn()){
-      try{await deleteCloudLearning(this.course.id)}catch(error){console.warn('[Language Lab] cloud reset failed',error)}
-    }
+    await syncNow('reset').catch(()=>{});
     this.renderCourse();
   }
 

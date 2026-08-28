@@ -6,7 +6,7 @@ Free, mobile-first multi-language learning platform hosted on GitHub Pages with 
 
 Japanese, Mandarin Chinese, Korean, English, Hindi, Spanish, French, German, Arabic, and Portuguese.
 
-## Current learning experience
+## Learning experience
 
 - Listen-first and speak-early practice
 - Browser text-to-speech with Auto / female-preferred / male-preferred / exact-device voice choice
@@ -14,58 +14,73 @@ Japanese, Mandarin Chinese, Korean, English, Hindi, Spanish, French, German, Ara
 - Japanese and Mandarin staged beginner → advanced curriculum paths
 - Foundation courses for the other eight languages
 - Reading, vocabulary, phrase building, flashcards, quizzes and writing practice
-- Five-skill tracking: listening, speaking, recognition, recall and writing
-- Skill mastery now reports course coverage so one practiced item cannot appear as 100% course mastery
-- XP, streaks, weak-item review and course position
-- First-login language + audio onboarding
-- Signed-in “My Languages” home with add / remove / make-primary controls
-- Guest mode with device-local progress
-- Google sign-in with account-scoped local state and Supabase cloud sync
+- Five-skill model weighted toward communication: Listening 40%, Speaking 30%, Recognition 15%, Recall 10%, Writing 5%
+- Skill mastery + coverage instead of a single inflated percentage
+- Time-aware review scheduling based on recent practice and mastery
+- First-login primary-language + audio onboarding
+- Signed-in My Languages view with add / remove / make-primary controls
+- Guest mode with separate device-local state
 - Offline-capable PWA shell
 
-## Architecture
+## V11 architecture
 
-The app remains a zero-build static website. V10 introduces shared infrastructure before further feature growth:
+V11 replaces the historical V6/V8/V9/V10 runtime patch stack with ES modules under `src/`:
 
-- `core-logic.js` — pure shared/date/merge helpers, also used by tests
-- `storage-scope.js` — account/guest browser-state isolation
-- `cloud-sync-v10.js` — Supabase reconciliation, preference sync and Realtime debounce
-- `skills-v10.js` — five-skill mastery + coverage
-- `v10-hardening.js` — compatibility protection for older V6/V8 learning layers
-- `onboarding-v10.js` — account learning preferences
-- `my-languages-v10.js` — primary/enabled-language management
+- `src/app.js` — application bootstrap and render coordination
+- `src/store.js` — account/guest local state, preferences, exact course position and event queue
+- `src/cloud.js` — Google auth, Supabase event sync, preferences, exact course-position sync and Realtime
+- `src/learning.js` — event-derived XP, streak, mastery, coverage and review scheduling
+- `src/data.js` — normalized course access and stable learning-target IDs
+- `src/audio.js` — TTS and per-device voice selection
+- `src/practice.js` — listening, shadowing, speak-from-meaning and conversation practice
+- `src/course.js` — lessons, guide, writing, vocabulary, cards, quiz and progress
+- `src/home.js` — dashboard, daily mission and My Languages rendering
+- `src/auth-ui.js` — sign-in, onboarding and language management
+- `src/writing.js` — touch/stylus/mouse practice pad
+- `src/utils.js` — shared pure utilities
 
-Legacy course/content layers (`v7-content.js`, `v8-content.js`, `v9-content.js`, `v9-course-ui.js`, `v6-learning.js`, `v8-listen-speak.js`) are still present while the learning UI is migrated gradually rather than rewritten in one risky release.
+The old runtime monkey-patching, cloned-button overrides, periodic position writer, snapshot MAX merge and runtime CSS injection have been removed.
 
-## Cloud data
+The V7/V8/V9 files that remain are **course-content authoring layers only**. They no longer patch application behavior.
+
+## Cloud model
 
 Supabase stores:
 
-- user profile + primary/enabled languages + audio preference
-- per-language progress/mastery/favorites/counters
-- daily study activity
+- `profiles` — account metadata and learning preferences
+- `learning_events` — append-oriented practice/favorite/reset events with unique UUIDs
+- `course_positions` — exact last unit/item per language
 
-RLS restricts each authenticated user to their own rows. Browser publishable credentials are intentionally public; service-role keys and database passwords must never be committed.
+XP, streaks, mastery, coverage and review state are derived from learning events instead of being treated as authoritative counters. Independent offline events can therefore coexist and sync without the old `MAX(local, cloud)` loss problem.
 
-V10 also prevents the service worker from intercepting or caching Supabase/OAuth/CDN traffic.
+RLS restricts each authenticated user to their own rows. The browser publishable Supabase key is intentionally public; service-role keys and database passwords must never be committed.
+
+## Progress rules
+
+- Passive audio playback does **not** award XP or mastery.
+- Active attempts generate learning events.
+- Repeating the same or lower score on the same target/skill on the same day does not farm additional XP.
+- Improved attempts can still earn XP.
+- Reset markers make older course practice stop counting across devices.
+- Daily streaks use one local-calendar date implementation.
 
 ## Important limitations
 
-- Speech scoring compares browser-recognized text with the target; it is **not phoneme-level pronunciation or Mandarin tone scoring**.
-- Writing completion measures drawing/practice activity; it does **not yet validate stroke shape/order with AI**.
-- Current cloud counters still use monotonic/MAX reconciliation. This prevents stale-device rollback but does not mathematically preserve simultaneous offline increments from multiple devices. A unique event ledger is planned as a separate data migration.
-- Review scheduling is mastery-based, not yet a full FSRS/SRS scheduler.
-- Japanese/Mandarin “advanced” labels describe the internal curriculum path, not official JLPT/HSK certification.
+- Speech scoring compares browser-recognized text with the target. It is **not phoneme-level pronunciation, accent or Mandarin tone scoring**.
+- Writing records meaningful drawing/practice effort. It does **not yet validate stroke shape/order with AI**.
+- Browser TTS quality and available male/female voices vary by device/OS.
+- Review scheduling is a lightweight V11 interval model, not yet a full FSRS implementation.
+- Japanese/Mandarin advanced labels describe the internal learning path, not official JLPT/HSK certification.
 
 ## Development checks
 
-No build step is required for GitHub Pages. Node is used only for development checks:
+No build step is required for GitHub Pages. Node is used for repository checks:
 
 ```bash
 npm run ci
 ```
 
-This runs JavaScript syntax checks and zero-dependency regression tests for shared V10 logic. Pull requests also run the same checks through GitHub Actions.
+CI checks JavaScript syntax, module references, service-worker assets, PWA files, removal of legacy runtime references and core utility behavior.
 
 ## Hosting
 

@@ -21,7 +21,7 @@ test('index loads the V11 module entry point and required course data',()=>{
 
 test('every relative ES-module import resolves to a file',()=>{
   const srcDir=path.join(root,'src'),modules=srcModules();
-  assert.ok(modules.length>=10);
+  assert.ok(modules.length>=11);
   for(const module of modules){
     const code=read(path.join('src',module));
     for(const match of code.matchAll(/from['"](\.\/[^'"]+)['"]/g)){
@@ -40,8 +40,7 @@ test('literal DOM ids used by modules are declared and static page ids are uniqu
   const modules=srcModules().map(name=>({name,code:read(path.join('src',name))}));
   const dynamicIds=modules.flatMap(({code})=>[...code.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]));
   const known=new Set([...pageIds,...dynamicIds]);
-
-  for(const{ name,code }of modules){
+  for(const{name,code}of modules){
     const refs=new Set([
       ...[...code.matchAll(/\$\(['"]([^'"]+)['"]\)/g)].map(match=>match[1]),
       ...[...code.matchAll(/getElementById\(['"]([^'"]+)['"]\)/g)].map(match=>match[1])
@@ -57,31 +56,45 @@ test('clean modules do not monkey-patch functions or inject CSS',()=>{
   assert.equal(code.includes('window.speak='),false);
 });
 
-test('service worker caches only existing local assets and bypasses cross-origin traffic',()=>{
+test('V11.2 uses structural target IDs and stage-aware practice data',()=>{
+  const data=read('src/data.js');
+  assert.match(data,/structuralItemId/);
+  assert.match(data,/stageId/);
+  assert.match(data,/conversationItems/);
+  assert.equal(data.includes('hashString'),false);
+});
+
+test('event history is backed by IndexedDB rather than localStorage snapshots',()=>{
+  assert.ok(exists('src/event-db.js'));
+  const store=read('src/store.js');
+  assert.match(store,/from'\.\/event-db\.js'/);
+  assert.match(store,/events:\[\]/);
+  assert.match(store,/eventCursor/);
+});
+
+test('service worker caches only known app assets, pins Supabase runtime and bypasses API traffic',()=>{
   const sw=read('sw.js');
-  const match=sw.match(/const ASSETS=\[(.*?)\];/s);
-  assert.ok(match,'ASSETS list missing');
+  const match=sw.match(/const ASSETS=\[(.*?)\];/s);assert.ok(match,'ASSETS list missing');
   const refs=[...match[1].matchAll(/['"]\.\/([^'"]*)['"]/g)].map(item=>item[1]).filter(Boolean);
   for(const ref of refs)assert.ok(exists(ref),`Missing cached asset: ${ref}`);
   assert.match(sw,/url\.origin!==self\.location\.origin/);
+  assert.match(sw,/SUPABASE_PINNED/);
+  assert.match(sw,/@supabase\/supabase-js@2\.112\.3/);
   assert.match(sw,/self\.skipWaiting\(\)/);
   assert.match(sw,/self\.clients\.claim\(\)/);
 });
 
 test('manifest icon files exist',()=>{
-  const manifest=JSON.parse(read('manifest.webmanifest'));
-  assert.ok(Array.isArray(manifest.icons)&&manifest.icons.length>0);
-  for(const icon of manifest.icons){
-    const src=String(icon.src||'').replace(/^\.\//,'');
-    assert.ok(src&&exists(src),`Missing manifest icon: ${src}`);
-  }
+  const manifest=JSON.parse(read('manifest.webmanifest'));assert.ok(Array.isArray(manifest.icons)&&manifest.icons.length>0);
+  for(const icon of manifest.icons){const src=String(icon.src||'').replace(/^\.\//,'');assert.ok(src&&exists(src),`Missing manifest icon: ${src}`)}
 });
 
-test('V11 database migrations are versioned in the repository',()=>{
-  for(const file of [
+test('V11.2 database migrations are versioned in the repository',()=>{
+  for(const file of[
     'supabase/migrations/20260827_v11_event_learning_model.sql',
     'supabase/migrations/20260828_v11_course_positions.sql',
-    'supabase/migrations/20260828_v11_remove_legacy_progress_schema.sql'
+    'supabase/migrations/20260828_v11_remove_legacy_progress_schema.sql',
+    'supabase/migrations/20260828_v11_2_position_conflict_guard.sql'
   ])assert.ok(exists(file),`Missing V11 migration: ${file}`);
 });
 

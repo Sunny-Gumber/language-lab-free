@@ -148,9 +148,9 @@ export function updateUi(patch,reason='ui'){const current=getState();current.ui=
 
 export function setPosition(languageCode,unitIndex,itemIndex){
   if(!courseCodes.includes(languageCode))return;
-  const current=getState(),next={unitIndex:Math.max(0,Number(unitIndex)||0),itemIndex:Math.max(0,Number(itemIndex)||0),clientUpdatedAt:new Date().toISOString()},previous=current.ui.positions[languageCode];
+  const current=getState(),next={unitIndex:Math.max(0,Number(unitIndex)||0),itemIndex:Math.max(0,Number(itemIndex)||0),clientUpdatedAt:new Date().toISOString()},previous=current.ui.positions[languageCode],languageChanged=current.ui.currentLanguage!==languageCode;
   current.ui.currentLanguage=languageCode;
-  if(previous?.unitIndex===next.unitIndex&&previous?.itemIndex===next.itemIndex)return;
+  if(previous?.unitIndex===next.unitIndex&&previous?.itemIndex===next.itemIndex){if(languageChanged)emit('ui');return}
   current.ui.positions[languageCode]=next;
   if(scope!=='guest')current.ui.positionDirty[languageCode]=true;
   emit('position');

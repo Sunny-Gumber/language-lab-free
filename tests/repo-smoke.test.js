@@ -31,19 +31,22 @@ test('every relative ES-module import resolves to a file',()=>{
   }
 });
 
-test('literal DOM ids used by modules exist and page ids are unique',()=>{
+test('literal DOM ids used by modules are declared and static page ids are unique',()=>{
   const html=read('index.html');
   const pageIds=[...html.matchAll(/\sid="([^"]+)"/g)].map(match=>match[1]);
   const duplicates=pageIds.filter((id,index)=>pageIds.indexOf(id)!==index);
   assert.deepEqual([...new Set(duplicates)],[],`Duplicate ids: ${[...new Set(duplicates)].join(', ')}`);
-  const known=new Set(pageIds);
-  for(const module of srcModules()){
-    const code=read(path.join('src',module));
+
+  const modules=srcModules().map(name=>({name,code:read(path.join('src',name))}));
+  const dynamicIds=modules.flatMap(({code})=>[...code.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]));
+  const known=new Set([...pageIds,...dynamicIds]);
+
+  for(const{ name,code }of modules){
     const refs=new Set([
       ...[...code.matchAll(/\$\(['"]([^'"]+)['"]\)/g)].map(match=>match[1]),
       ...[...code.matchAll(/getElementById\(['"]([^'"]+)['"]\)/g)].map(match=>match[1])
     ]);
-    for(const id of refs)assert.ok(known.has(id),`${module} references missing DOM id #${id}`);
+    for(const id of refs)assert.ok(known.has(id),`${name} references undeclared DOM id #${id}`);
   }
 });
 

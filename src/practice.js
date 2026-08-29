@@ -1,4 +1,4 @@
-import{availableStages,conversations,getCourse,hasConversation,practiceTargets}from'./data.js';
+import{availableStages,conversationItems,getCourse,hasConversation,practiceTargets}from'./data.js';
 import{classifyVoice,exactVoiceName,setAudioPreference,setExactVoice,speak,subscribeVoices,voicesFor}from'./audio.js';
 import{recordPractice,skillStats,weakestTarget}from'./learning.js';
 import{getState,updateUi}from'./store.js';
@@ -40,9 +40,13 @@ export class PracticeController{
       const button=event.target.closest('[data-practice-stage]');
       if(!button)return;
       this.stageId=button.dataset.practiceStage;
+      this.conversationIndex=0;
+      if(this.mode==='conversation'&&!hasConversation(this.course,this.stageId))this.mode='listen';
       const stages={...(getState().ui.activeStage||{}),[this.course.id]:this.stageId};
-      updateUi({activeStage:stages},'stage');
+      updateUi({activeStage:stages,practiceMode:this.mode},'stage');
       this.renderStages();
+      this.renderModes();
+      this.renderSkills();
       this.next();
     });
     $('practiceBody').addEventListener('click',event=>this.handleBodyClick(event));
@@ -54,7 +58,8 @@ export class PracticeController{
     const saved=getState().ui.activeStage?.[course.id];
     this.stageId=stages.some(stage=>stage.id===saved)?saved:stages[0]?.id||null;
     this.mode=getState().ui.practiceMode||'listen';
-    if(this.mode==='conversation'&&!hasConversation(course))this.mode='listen';
+    if(this.mode==='conversation'&&!hasConversation(course,this.stageId))this.mode='listen';
+    this.conversationIndex=0;
     this.render();
   }
 
@@ -101,7 +106,7 @@ export class PracticeController{
   renderModes(){
     $('practiceTitle').textContent=TITLES[this.mode]||TITLES.listen;
     $('practiceModes').querySelectorAll('[data-mode]').forEach(button=>{
-      const unavailable=button.dataset.mode==='conversation'&&!hasConversation(this.course);
+      const unavailable=button.dataset.mode==='conversation'&&!hasConversation(this.course,this.stageId);
       button.hidden=unavailable;
       button.disabled=unavailable;
       button.classList.toggle('active',button.dataset.mode===this.mode);
@@ -112,7 +117,9 @@ export class PracticeController{
     const html=['listening','speaking','recognition','recall','writing'].map(skill=>{
       const stats=skillStats(this.course.id,skill,this.stageId);
       const icons={listening:'👂',speaking:'🎙️',recognition:'👁️',recall:'🧠',writing:'✍️'};
-      return`<div class="skill-card"><span>${icons[skill]} ${skill}</span><strong>${stats.mastery}%</strong><div class="progressbar"><span style="width:${stats.mastery}%"></span></div><small>${stats.attempted}/${stats.total} practiced · ${stats.coverage}% coverage</small></div>`;
+      const bar=stats.assessed?stats.mastery:stats.coverage;
+      const headline=stats.assessed?`${stats.mastery}%`:'Practice';
+      return`<div class="skill-card"><span>${icons[skill]} ${skill}</span><strong>${headline}</strong><div class="progressbar"><span style="width:${bar}%"></span></div><small>${stats.attempted}/${stats.total} practiced · ${stats.coverage}% coverage${stats.assessed?'':' · not accuracy-scored'}</small></div>`;
     }).join('');
     $('skillGrid').innerHTML=html;
     $('progressSkillGrid').innerHTML=html;
@@ -120,24 +127,22 @@ export class PracticeController{
 
   next(){
     if(!$('practiceBody'))return;
-    if(this.mode==='conversation'&&hasConversation(this.course)){this.renderConversation();return}
+    if(this.mode==='conversation'&&hasConversation(this.course,this.stageId)){this.renderConversation();return}
     if(this.mode==='shadow'){this.renderShadow();return}
     if(this.mode==='meaning'){this.renderMeaning();return}
     this.renderListen();
   }
 
-  targetFor(skill){
-    return weakestTarget(this.course.id,skill,this.stageId)||practiceTargets(this.course,skill,this.stageId)[0]||null;
-  }
+  targetFor(skill){return weakestTarget(this.course.id,skill,this.stageId)||practiceTargets(this.course,skill,this.stageId)[0]||null}
 
   renderListen(){
     this.target=this.targetFor('listening');
     if(!this.target){$('practiceBody').innerHTML='<p class="muted">No listening content is available for this stage yet.</p>';return}
-    const pool=practiceTargets(this.course,'listening',this.stageId).filter(target=>target.id!==this.target.id||target.meaning!==this.target.meaning);
+    const pool=practiceTargets(this.course,'listening',this.stageId).filter(target=>target.id!==this.target.id);
     const options=shuffle([this.target,...shuffle(pool).slice(0,3)]);
     $('practiceBody').innerHTML=`
       <div class="audio-prompt"><span class="practice-icon">👂</span><h3>Listen without reading</h3><button class="primary" data-practice-action="play" type="button">🔊 Play audio</button></div>
-      <div class="practice-options">${options.map((option,index)=>`<button data-listen-answer="${index}" data-target="${escapeHtml(option.id)}" data-native="${encodeURIComponent(option.native)}" type="button">${escapeHtml(option.meaning)}</button>`).join('')}</div>
+      <div class="practice-options">${options.map(option=>`<button data-listen-answer data-target="${escapeHtml(option.id)}" type="button">${escapeHtml(option.meaning)}</button>`).join('')}</div>
       <div id="practiceFeedback" class="practice-feedback">Choose the meaning you heard.</div>
       <button class="secondary" data-practice-action="next" type="button">Next listening item</button>`;
   }
@@ -163,9 +168,10 @@ export class PracticeController{
   }
 
   renderConversation(){
-    const list=conversations[this.course.id]||[];
+    const list=conversationItems(this.course,this.stageId);
+    if(!list.length){this.mode='listen';this.renderModes();this.renderListen();return}
     const item=list[this.conversationIndex%list.length];
-    this.target={id:`conversation:${this.course.id}:${this.conversationIndex%list.length}`,native:item.answer,roman:item.roman,meaning:item.answerMeaning};
+    this.target={id:`conversation:${this.course.id}:${this.stageId}:${this.conversationIndex%list.length}`,native:item.answer,roman:item.roman,meaning:item.answerMeaning};
     $('practiceBody').innerHTML=`
       <div class="audio-prompt"><span class="eyebrow">Other speaker</span><h3>${escapeHtml(item.meaning)}</h3><button class="primary" data-practice-action="conversation-play" type="button">🔊 Hear prompt</button></div>
       <div class="actions"><button class="primary" data-practice-action="speak" type="button">🎙 Respond</button><button class="secondary" data-practice-action="reveal" type="button">Show model answer</button></div>
@@ -186,22 +192,20 @@ export class PracticeController{
     if(action==='reveal'){$('practiceReveal')?.classList.remove('blurred-answer');return}
     if(action==='conversation-next'){this.conversationIndex++;this.renderConversation();return}
     if(action==='conversation-play'){
-      const item=conversations[this.course.id]?.[this.conversationIndex%(conversations[this.course.id]?.length||1)];
+      const list=conversationItems(this.course,this.stageId),item=list[this.conversationIndex%(list.length||1)];
       if(item)speak(item.prompt,this.course,{rate:.78});
     }
   }
 
   answerListening(button){
     if(!this.target)return;
-    const correct=decodeURIComponent(button.dataset.native||'')===this.target.native;
-    $('practiceBody').querySelectorAll('[data-listen-answer]').forEach(option=>option.disabled=true);
-    button.classList.add(correct?'correct':'wrong');
+    const correct=button.dataset.target===this.target.id;
+    $('practiceBody').querySelectorAll('[data-listen-answer]').forEach(option=>{option.disabled=true;if(option.dataset.target===this.target.id)option.classList.add('correct')});
+    if(!correct)button.classList.add('wrong');
     if(correct){
       recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'listening',score:100,xp:8,metadata:{mode:'listen'}});
       recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'recognition',score:80,xp:0,metadata:{mode:'listen-support'}});
-    }else{
-      recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'listening',score:25,xp:1,metadata:{mode:'listen'}});
-    }
+    }else recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'listening',score:25,xp:1,metadata:{mode:'listen'}});
     $('practiceFeedback').innerHTML=`${correct?'✅ Correct':'❌ Not this one'}<br><b>${escapeHtml(this.target.native)}</b> · ${escapeHtml(this.target.roman)} — ${escapeHtml(this.target.meaning)}`;
     this.renderSkills();
   }

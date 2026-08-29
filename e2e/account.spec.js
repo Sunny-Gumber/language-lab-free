@@ -70,7 +70,7 @@ test('event progress and exact detailed-lesson position restore on a fresh secon
   await page.locator('[data-language="ja"]').click();await expect(page.locator('#journeyTab')).toHaveClass(/active/);
   await page.locator('[data-tab="explore"]').click();await page.locator('[data-v13-tool="learn"]').click();
   await expect(page.locator('#learnTab')).toHaveClass(/active/);await page.locator('#unitSelect').selectOption('2');await expect(page.locator('#unitSelect')).toHaveValue('2');
-  await page.locator('[data-v13-back]').click();await page.locator('[data-tab="review"]').click();await page.locator('[data-v13-tool="cards"]').click();
+  await page.locator('#learnTab [data-v13-back]').click();await page.locator('[data-tab="review"]').click();await page.locator('[data-v13-tool="cards"]').click();
   await page.locator('#flashcard').click();await page.locator('#cardGood').click();await expect(page.locator('#topXp')).toHaveText('4');
   await page.evaluate(()=>window.LanguageLab.sync());
 

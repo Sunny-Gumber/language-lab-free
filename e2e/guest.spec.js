@@ -6,9 +6,9 @@ async function waitForBoot(page){
   await expect(page.locator('.fatal-error')).toHaveCount(0);
 }
 async function reachGuidedCheck(page){
-  await page.locator('[data-lesson-action="continue"]').click(); // context -> listen
-  await page.locator('[data-lesson-action="continue"]').click(); // listen -> understand
-  await page.locator('[data-lesson-action="continue"]').click(); // understand -> check
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-action="continue"]').click();
 }
 async function completeFirstGuidedCheck(page){
   await page.locator('[data-journey-start]').first().click();
@@ -19,17 +19,17 @@ async function completeFirstGuidedCheck(page){
   await expect.poll(()=>page.evaluate(()=>window.LanguageLab.getState().events.filter(event=>event.activity==='practice').length)).toBeGreaterThanOrEqual(2);
 }
 async function completeGuidedItemCorrectly(page,{moveNext=true}={}){
-  await page.locator('[data-lesson-action="continue"]').click(); // context -> listen
-  await page.locator('[data-lesson-action="continue"]').click(); // listen -> understand
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-action="continue"]').click();
   const meaning=(await page.locator('.guided-meaning-v13').textContent())?.trim();
   const native=(await page.locator('.guided-native-v13').textContent())?.trim();
-  await page.locator('[data-lesson-action="continue"]').click(); // understand -> check
+  await page.locator('[data-lesson-action="continue"]').click();
   await page.locator('[data-lesson-answer]').filter({hasText:meaning}).first().click();
-  await page.locator('[data-lesson-action="continue"]').click(); // check -> recall
+  await page.locator('[data-lesson-action="continue"]').click();
   await page.locator('[data-recall-answer]').filter({hasText:native}).first().click();
-  await page.locator('[data-lesson-action="continue"]').click(); // recall -> task
+  await page.locator('[data-lesson-action="continue"]').click();
   await page.locator('[data-lesson-action="manual-speak"]').click();
-  await page.locator('[data-lesson-action="continue"]').click(); // task -> complete
+  await page.locator('[data-lesson-action="continue"]').click();
   if(moveNext)await page.locator('[data-lesson-action="next-item"]').click();
 }
 
@@ -76,15 +76,19 @@ test('guided item moves from context through recall into a real-world speaking t
 
 test('wrong comprehension is remembered and schedules an in-session retry',async({page},testInfo)=>{
   test.skip(testInfo.project.name!=='desktop-chromium','Retry scheduling is exercised once on desktop Chromium.');
-  await page.goto('/');await waitForBoot(page);await page.locator('[data-language="ja"]').click();await page.locator('[data-journey-start]').first().click();await reachGuidedCheck(page);
-  const wrong=page.locator('[data-lesson-answer]:not(.correct)').first();
-  const correctMeaning=(await page.evaluate(()=>document.querySelector('.guided-meaning-v13')?.textContent||'' )).trim();
-  const options=page.locator('[data-lesson-answer]');let wrongIndex=0;for(let i=0;i<await options.count();i++){if((await options.nth(i).textContent())?.trim()!==correctMeaning){wrongIndex=i;break}}
-  await options.nth(wrongIndex).click();
+  await page.goto('/');await waitForBoot(page);await page.locator('[data-language="ja"]').click();await page.locator('[data-journey-start]').first().click();
   await page.locator('[data-lesson-action="continue"]').click();
-  const native=(await page.locator('[data-recall-answer].correct').count())?null:null;
-  const recallOptions=page.locator('[data-recall-answer]');await recallOptions.first().click();
-  await page.locator('[data-lesson-action="continue"]').click();await page.locator('[data-lesson-action="manual-speak"]').click();await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-action="continue"]').click();
+  const correctMeaning=(await page.locator('.guided-meaning-v13').textContent())?.trim();
+  await page.locator('[data-lesson-action="continue"]').click();
+  const options=page.locator('[data-lesson-answer]');let wrongIndex=-1;
+  for(let i=0;i<await options.count();i++){if((await options.nth(i).textContent())?.trim()!==correctMeaning){wrongIndex=i;break}}
+  expect(wrongIndex).toBeGreaterThanOrEqual(0);await options.nth(wrongIndex).click();
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-recall-answer]').first().click();
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-action="manual-speak"]').click();
+  await page.locator('[data-lesson-action="continue"]').click();
   await expect(page.locator('.guided-complete-v13')).toContainText('scheduled to return');
   await page.locator('[data-lesson-action="next-item"]').click();
   await expect(page.locator('.guided-top-v13')).toContainText('Session 2/4');

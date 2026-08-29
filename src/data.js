@@ -4,6 +4,28 @@ const rawCourses=globalThis.LANGUAGE_LAB_COURSES;
 if(!Array.isArray(rawCourses)||!rawCourses.length)throw new Error('Course data did not load.');
 
 const safeKey=value=>String(value??'').trim().replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
+function reorderByTitles(language,titles){
+  const remaining=[...(language.units||[])],ordered=[];
+  for(const title of titles){const index=remaining.findIndex(unit=>unit.title===title);if(index>=0)ordered.push(remaining.splice(index,1)[0])}
+  language.units=[...ordered,...remaining];
+}
+function applyPedagogicalOrder(language){
+  if(language.id==='ja'){
+    const starter=[
+      'Japanese Sound System','Greetings & Polite Basics','Introduce Yourself','Hiragana K Row','First Sentence Patterns','Hiragana S Row','Numbers & Time Basics',
+      'Hiragana T & N Rows','Hiragana H & M Rows','Complete Basic Hiragana','Voiced Sounds & Small っ','Contracted Sounds','Katakana Foundations'
+    ];
+    reorderByTitles(language,starter);
+    language.units.slice(0,starter.length).forEach((unit,index)=>{unit.stage=index<=6?'beginner-1':'beginner-2'});
+    const stages=language.curriculum?.stages||[];
+    const beginner1=stages.find(stage=>stage.id==='beginner-1'),beginner2=stages.find(stage=>stage.id==='beginner-2');
+    if(beginner1)Object.assign(beginner1,{startUnit:0,endUnit:6,description:'Sound, greetings, self-introduction and first kana'});
+    if(beginner2)Object.assign(beginner2,{startUnit:7,endUnit:starter.length-1,description:'More kana, numbers, sentence patterns and Katakana'});
+  }
+  if(language.id==='zh')reorderByTitles(language,['Pinyin & Four Tones','Greetings & Basic Questions','First Characters']);
+}
+rawCourses.forEach(applyPedagogicalOrder);
+
 function rawStages(language){
   const stages=(language.curriculum?.stages||[]).filter(stage=>stage.available!==false);
   return stages.length?stages:[{id:'foundation',label:'Foundation',description:'Current course',startUnit:0,endUnit:Math.max(0,(language.units||[]).length-1),available:true}];
@@ -14,15 +36,15 @@ function rawStageForUnit(language,unit,index){
   return stages.find(stage=>index>=Math.max(0,Number(stage.startUnit)||0)&&index<=Number(stage.endUnit??language.units.length-1))?.id||stages[0]?.id||'foundation';
 }
 function structuralItemId(language,unit,item,unitIndex,itemIndex){
-  const unitKey=safeKey(unit.key||unit.authorId)||`u${unitIndex+1}`;
-  const itemKey=safeKey(item.key||item.authorId)||`i${itemIndex+1}`;
+  const unitKey=safeKey(unit.key||unit.authorId||unit.title)||`u${unitIndex+1}`;
+  const itemKey=safeKey(item.key||item.authorId||item.roman||item.native)||`i${itemIndex+1}`;
   return`item:${language.id}:${unitKey}:${itemKey}`;
 }
-function structuralVocabId(language,word,index){const key=safeKey(word.key||word.authorId)||`v${index+1}`;return`vocab:${language.id}:${key}`}
+function structuralVocabId(language,word,index){const key=safeKey(word.key||word.authorId||word.roman||word.native)||`v${index+1}`;return`vocab:${language.id}:${key}`}
 
 export const courses=rawCourses.map(language=>{
   language.units=(language.units||[]).map((unit,unitIndex)=>{
-    unit.id=`unit:${language.id}:${safeKey(unit.key||unit.authorId)||`u${unitIndex+1}`}`;
+    unit.id=`unit:${language.id}:${safeKey(unit.key||unit.authorId||unit.title)||`u${unitIndex+1}`}`;
     unit.index=unitIndex;
     unit.stageId=rawStageForUnit(language,unit,unitIndex);
     unit.items=(unit.items||[]).map((item,itemIndex)=>{

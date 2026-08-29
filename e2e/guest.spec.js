@@ -61,7 +61,7 @@ test('correct gradual practice unlocks the next unit only after enough coverage'
   await completeGuidedItemCorrectly(page,{moveNext:false});
   await page.locator('[data-lesson-action="back-path"]').click();
   await expect(page.locator('[data-journey-unit="1"]')).toBeEnabled();
-  await expect(page.locator('[data-journey-unit="0"]')).toContainText('Ready');
+  await expect(page.locator('[data-journey-unit="0"]')).toContainText('Building');
 });
 
 test('first guided comprehension turns the start experience into the learner dashboard',async({page})=>{

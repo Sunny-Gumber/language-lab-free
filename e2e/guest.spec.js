@@ -2,8 +2,16 @@ import{test,expect}from'@playwright/test';
 import{blockExternal}from'./helpers.js';
 
 async function waitForBoot(page){
-  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('12.0');
+  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('13.0');
   await expect(page.locator('.fatal-error')).toHaveCount(0);
+}
+async function completeFirstGuidedCheck(page){
+  await page.locator('[data-journey-start]').first().click();
+  await expect(page.locator('.guided-lesson-v13')).toBeVisible();
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-answer]').first().click();
+  await expect.poll(()=>page.evaluate(()=>window.LanguageLab.getState().events.filter(event=>event.activity==='practice').length)).toBeGreaterThanOrEqual(2);
 }
 
 test.beforeEach(async({page})=>{await blockExternal(page)});
@@ -23,16 +31,23 @@ test('new guest sees a start experience instead of an empty dashboard',async({pa
   expect(overflow.scroll).toBeLessThanOrEqual(overflow.client+1);expect(errors).toEqual([]);
 });
 
-test('first active practice turns the start experience into the learner dashboard',async({page})=>{
+test('new language opens a gradual journey with later units gated',async({page})=>{
   await page.goto('/');await waitForBoot(page);
   await page.locator('[data-language="ja"]').click();
   await expect(page.locator('#courseName')).toHaveText('Japanese');
-  await expect(page.locator('#practiceTab')).toHaveClass(/active/);
+  await expect(page.locator('#journeyTab')).toHaveClass(/active/);
+  await expect(page.locator('.journey-hero-v13')).toContainText('Start Japanese slowly');
+  await expect(page.locator('[data-journey-unit="0"]')).toBeEnabled();
+  await expect(page.locator('[data-journey-unit="1"]')).toBeDisabled();
+  await expect(page.locator('.v13-tabs [data-tab]')).toHaveCount(5);
+});
 
-  await page.locator('[data-tab="cards"]').click();await expect(page.locator('#cardsTab')).toHaveClass(/active/);await expect(page.locator('#cardFront')).not.toHaveText('');
-  await page.locator('#flashcard').click();await expect(page.locator('#cardBack')).not.toHaveClass(/hidden/);await page.locator('#cardGood').click();
-  await expect(page.locator('#topXp')).toHaveText('4');
+test('first guided comprehension turns the start experience into the learner dashboard',async({page})=>{
+  await page.goto('/');await waitForBoot(page);
+  await page.locator('[data-language="ja"]').click();
+  await completeFirstGuidedCheck(page);
   await expect(page.locator('body')).not.toHaveClass(/visitor-mode/);
+  await expect.poll(()=>page.evaluate(()=>Number(document.getElementById('topXp').textContent))).toBeGreaterThan(0);
 
   await page.locator('#backBtn').click();
   await expect(page.locator('.learner-hero')).toContainText('Keep your language');
@@ -40,19 +55,18 @@ test('first active practice turns the start experience into the learner dashboar
   await expect(page.locator('#languagesHeading')).toHaveText('Your languages');
 });
 
-test('guest practice persists in IndexedDB, survives reload and resets cleanly',async({page})=>{
+test('guided progress persists in IndexedDB, survives reload and resets cleanly',async({page})=>{
   await page.goto('/');await waitForBoot(page);
-  await page.locator('[data-language="ja"]').click();await expect(page.locator('#courseName')).toHaveText('Japanese');
+  await page.locator('[data-language="ja"]').click();
+  await completeFirstGuidedCheck(page);
+  const before=await page.evaluate(()=>window.LanguageLab.getState().events.filter(event=>event.activity==='practice').length);expect(before).toBeGreaterThanOrEqual(2);
 
-  await page.locator('[data-tab="cards"]').click();await expect(page.locator('#cardsTab')).toHaveClass(/active/);await expect(page.locator('#cardFront')).not.toHaveText('');
-  await page.locator('#flashcard').click();await expect(page.locator('#cardBack')).not.toHaveClass(/hidden/);await page.locator('#cardGood').click();
+  await page.reload();await waitForBoot(page);
+  const restored=await page.evaluate(()=>window.LanguageLab.getState().events.filter(event=>event.activity==='practice').length);expect(restored).toBe(before);
+  await expect(page.locator('body')).not.toHaveClass(/visitor-mode/);
 
-  await expect(page.locator('#topXp')).toHaveText('4');
-  const firstState=await page.evaluate(()=>window.LanguageLab.getState());expect(firstState.events).toHaveLength(1);expect(firstState.events[0].activity).toBe('practice');expect(firstState.events[0].skill).toBe('recall');expect(firstState.events[0].xpDelta).toBe(4);
-
-  await page.reload();await waitForBoot(page);await expect(page.locator('#topXp')).toHaveText('4');
-
-  await page.locator('[data-language="ja"]').click();await page.locator('[data-tab="progress"]').click();page.once('dialog',dialog=>dialog.accept());await page.locator('#resetCourseBtn').click();
+  await page.locator('[data-language="ja"]').click();await expect(page.locator('#journeyTab')).toHaveClass(/active/);
+  await page.locator('[data-tab="progress"]').click();page.once('dialog',dialog=>dialog.accept());await page.locator('#resetCourseBtn').click();
   await expect(page.locator('#topXp')).toHaveText('0');
   const resetState=await page.evaluate(()=>window.LanguageLab.getState());expect(resetState.events.some(event=>event.activity==='reset')).toBe(true);
   await page.locator('#backBtn').click();await expect(page.locator('body')).not.toHaveClass(/visitor-mode/);

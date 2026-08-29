@@ -76,7 +76,7 @@ export const courses=rawCourses.map(language=>{
 
 export const courseCodes=courses.map(course=>course.id);
 export function getCourse(code){return courses.find(course=>course.id===code)||courses[0]}
-export function getUnit(course,index){const unit=course.units[Math.max(0,Math.min(Number(index)||0,course.units.length-1))];return unit}
+export function getUnit(course,index){return course.units[Math.max(0,Math.min(Number(index)||0,course.units.length-1))]}
 export function getItem(course,unitIndex,itemIndex){const unit=getUnit(course,unitIndex);return unit.items[Math.max(0,Math.min(Number(itemIndex)||0,unit.items.length-1))]}
 export function findItem(course,targetId){for(const unit of course.units){const item=unit.items.find(candidate=>candidate.id===targetId);if(item)return{unit,item,unitIndex:unit.index,itemIndex:item.index}}return null}
 export function availableStages(course){
@@ -135,7 +135,7 @@ export const conversations={
     {prompt:'これは いくらですか。',meaning:'How much is this?',answer:'せんえんです。',roman:'sen en desu',answerMeaning:'It is 1,000 yen.'}
   ],
   zh:[
-    {prompt:'你好，你好吗？',meaning:'Hello. How are you?',answer:'我很好，谢谢。',roman:'wǒ hěn hǎo, xièxie',answerMeaning:'I am very well, thank you.'},
+    {prompt:'你好，你好吗？',meaning:'Hello, how are you?',answer:'我很好，谢谢。',roman:'wǒ hěn hǎo, xièxie',answerMeaning:'I am very well, thank you.'},
     {prompt:'你叫什么名字？',meaning:'What is your name?',answer:'我叫 Alex。',roman:'wǒ jiào Alex',answerMeaning:'My name is Alex.'},
     {prompt:'请问，车站在哪儿？',meaning:'Excuse me, where is the station?',answer:'车站在那边。',roman:'chēzhàn zài nàbiān',answerMeaning:'The station is over there.'},
     {prompt:'这个多少钱？',meaning:'How much is this?',answer:'这个一百块。',roman:'zhège yìbǎi kuài',answerMeaning:'This is 100 yuan.'}

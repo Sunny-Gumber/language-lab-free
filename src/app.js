@@ -2,7 +2,7 @@ import{initializeStore,getPosition,getState,setPosition,subscribe}from'./store.j
 import{initializeCloud,subscribeAuth,subscribeStatus,getUser,isSignedIn,syncNow}from'./cloud.js';
 import{AccountUi}from'./auth-ui.js';
 import{HomeController}from'./home.js';
-import{PracticeController}from'./practice.js';
+import{PracticeController}from'./speech-aware-practice.js';
 import{CourseController}from'./course.js';
 import{JourneyController}from'./resumable-journey.js';
 import{HindiPronunciationController}from'./pronunciation-hi.js';

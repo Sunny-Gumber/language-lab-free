@@ -2,7 +2,7 @@ import{mastery,learningEvents,targetReview}from'./learning.js';
 
 const targetOf=event=>event.targetId||event.target_id;
 const occurredAt=event=>event.clientCreatedAt||event.client_created_at||event.createdAt||event.created_at||'';
-const numericScore=event=>Number.isFinite(Number(event.score))?Number(event.score):null;
+const numericScore=event=>event?.score==null?null:Number.isFinite(Number(event.score))?Number(event.score):null;
 const lowerFirst=value=>value?value[0].toLowerCase()+value.slice(1):value;
 
 export function sessionMixFromEvents(events=[]){

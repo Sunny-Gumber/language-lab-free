@@ -55,7 +55,7 @@ async function boot(){
   if(isSignedIn()&&getState().prefs.dirty)syncNow('boot').catch(()=>{});
   registerServiceWorker();
 
-  window.LanguageLab={version:'11.2',getState:()=>structuredClone(getState()),user:()=>getUser(),sync:()=>syncNow('manual')};
+  window.LanguageLab={version:'12.0',getState:()=>structuredClone(getState()),user:()=>getUser(),sync:()=>syncNow('manual')};
 }
 
 boot().catch(error=>{

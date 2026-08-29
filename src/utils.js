@@ -81,6 +81,33 @@ export function similarity(left,right){
   return clamp(1-distance/Math.max(a.length,b.length),0,1);
 }
 
+export function normalizeSpeechText(value,locale=''){
+  let text=normalizeText(value);
+  if(String(locale||'').toLowerCase().startsWith('ja')){
+    text=Array.from(text,char=>{
+      const code=char.codePointAt(0);
+      return code>=0x30A1&&code<=0x30F6?String.fromCodePoint(code-0x60):char;
+    }).join('');
+  }
+  return text;
+}
+
+export function speechSimilarity(left,right,locale=''){
+  return similarity(normalizeSpeechText(left,locale),normalizeSpeechText(right,locale));
+}
+
+export function bestSpeechMatch(transcripts,forms,locale=''){
+  const heard=[...(transcripts||[])].map(value=>String(value??'').trim()).filter(Boolean);
+  const expected=[...(forms||[])].map(value=>String(value??'').trim()).filter(Boolean);
+  let best={score:0,transcript:heard[0]||'',expected:expected[0]||''};
+  for(const transcript of heard)for(const form of expected){
+    const score=speechSimilarity(transcript,form,locale);
+    if(score>best.score)best={score,transcript,expected:form};
+    if(score===1)return{score,transcript,expected:form};
+  }
+  return best;
+}
+
 export function hashString(value){
   let hash=2166136261;
   for(const char of String(value??'')){

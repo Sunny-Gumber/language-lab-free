@@ -23,6 +23,14 @@ test('normalizeText and similarity handle punctuation and spacing',()=>{
   assert.ok(similarity('konnichiwa','konichiwa')>.8);
 });
 
+test('Japanese speech transcript matching accepts equivalent writing systems',()=>{
+  assert.equal(similarity('犬','いぬ'),1);
+  assert.equal(similarity('イヌ','いぬ'),1);
+  assert.equal(similarity('猫','ねこ'),1);
+  assert.equal(similarity('水','みず'),1);
+  assert.ok(similarity('犬','ねこ')<.5);
+});
+
 test('escapeHtml protects generated content',()=>{
   assert.equal(escapeHtml('<b>"x"</b>'),'&lt;b&gt;&quot;x&quot;&lt;/b&gt;');
 });

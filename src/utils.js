@@ -1,5 +1,26 @@
 export const clamp=(value,min=0,max=100)=>Math.min(max,Math.max(min,Number(value)||0));
 
+const JAPANESE_RECOGNITION_EQUIVALENTS=[
+  ['お早う','おはよう'],['有難う','ありがとう'],['済みません','すみません'],
+  ['来年','らいねん'],['学生','がくせい'],['雑誌','ざっし'],['番号','ばんごう'],['切手','きって'],['写真','しゃしん'],['趣味','しゅみ'],['食堂','しょくどう'],
+  ['食べる','たべる'],['聴く','きく'],['聞く','きく'],['今朝','けさ'],['世界','せかい'],['名前','なまえ'],['部屋','へや'],['歴史','れきし'],
+  ['朝','あさ'],['青','あお'],['犬','いぬ'],['海','うみ'],['駅','えき'],['音','おと'],['顔','かお'],['口','くち'],['魚','さかな'],['塩','しお'],['外','そと'],
+  ['地図','ちず'],['月','つき'],['手','て'],['時','とき'],['肉','にく'],['猫','ねこ'],['花','はな'],['鼻','はな'],['人','ひと'],['冬','ふゆ'],['本','ほん'],
+  ['町','まち'],['街','まち'],['水','みず'],['虫','むし'],['目','め'],['山','やま'],['雪','ゆき'],['夜','よる'],['林檎','りんご'],['車','くるま'],['六','ろく'],
+  ['私','わたし'],['誰','だれ'],['客','きゃく'],['九','きゅう'],['今日','きょう']
+];
+const JAPANESE_SCRIPT=/[\u3040-\u30ff]/;
+
+function canonicalJapanese(value){
+  let text=String(value??'');
+  text=Array.from(text,char=>{
+    const code=char.codePointAt(0);
+    return code>=0x30A1&&code<=0x30F6?String.fromCodePoint(code-0x60):char;
+  }).join('');
+  for(const[from,to]of JAPANESE_RECOGNITION_EQUIVALENTS)text=text.split(from).join(to);
+  return text;
+}
+
 export function todayLocal(date=new Date()){
   const year=date.getFullYear();
   const month=String(date.getMonth()+1).padStart(2,'0');
@@ -56,8 +77,12 @@ export function normalizeText(value){
 }
 
 export function similarity(left,right){
-  const a=normalizeText(left);
-  const b=normalizeText(right);
+  let a=normalizeText(left);
+  let b=normalizeText(right);
+  if(JAPANESE_SCRIPT.test(a)||JAPANESE_SCRIPT.test(b)){
+    a=canonicalJapanese(a);
+    b=canonicalJapanese(b);
+  }
   if(a===b)return 1;
   if(!a.length||!b.length)return 0;
 
@@ -79,6 +104,28 @@ export function similarity(left,right){
 
   const distance=previous[short.length];
   return clamp(1-distance/Math.max(a.length,b.length),0,1);
+}
+
+export function normalizeSpeechText(value,locale=''){
+  let text=normalizeText(value);
+  if(String(locale||'').toLowerCase().startsWith('ja')||JAPANESE_SCRIPT.test(text))text=canonicalJapanese(text);
+  return text;
+}
+
+export function speechSimilarity(left,right,locale=''){
+  return similarity(normalizeSpeechText(left,locale),normalizeSpeechText(right,locale));
+}
+
+export function bestSpeechMatch(transcripts,forms,locale=''){
+  const heard=[...(transcripts||[])].map(value=>String(value??'').trim()).filter(Boolean);
+  const expected=[...(forms||[])].map(value=>String(value??'').trim()).filter(Boolean);
+  let best={score:0,transcript:heard[0]||'',expected:expected[0]||''};
+  for(const transcript of heard)for(const form of expected){
+    const score=speechSimilarity(transcript,form,locale);
+    if(score>best.score)best={score,transcript,expected:form};
+    if(score===1)return{score,transcript,expected:form};
+  }
+  return best;
 }
 
 export function hashString(value){

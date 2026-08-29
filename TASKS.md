@@ -32,6 +32,7 @@ This file is the lightweight project tracker for ChatGPT/Codex and human contrib
 - [x] Japanese and Mandarin deeper curriculum paths.
 - [x] Language-specific scaffolding.
 - [x] Hindi/Devanagari pronunciation guidance for Japanese and Mandarin.
+- [x] Japanese speech transcript matching accepts common Kanji/Hiragana/Katakana equivalents instead of false-failing the same spoken word.
 - [x] Exact paused Journey session resume behavior.
 - [x] Desktop Chromium, Android emulation, iPhone WebKit and offline PWA regression coverage.
 - [x] GitHub Pages deployment from `main`.
@@ -48,6 +49,7 @@ Any future task touching these areas must include regression checks:
 - [ ] Learning events remain append-oriented and persist in IndexedDB.
 - [ ] Passive audio/home demo does not generate XP/mastery.
 - [ ] Manual speaking is not treated as a fake scored failure.
+- [ ] Japanese browser transcripts such as `犬` must not score 0% against equivalent Kana targets such as `いぬ`.
 - [ ] Writing remains effort/coverage until real assessment exists.
 - [ ] Unit progression is not reduced to XP-only unlocking.
 - [ ] Target IDs remain stable across curriculum reordering where possible.

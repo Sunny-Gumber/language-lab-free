@@ -8,16 +8,37 @@ Japanese, Mandarin Chinese, Korean, English, Hindi, Spanish, French, German, Ara
 
 ## V12 home experience
 
-The home page now has two product states instead of showing an empty learner dashboard to everybody:
+The home page has two product states instead of showing an empty learner dashboard to everybody:
 
-- **New visitor / new learner** — sees a landing-and-start experience with the product value proposition, a small interactive Japanese listening demo, clear language selection, how-it-works steps, product benefits, honest course-depth information and a no-account-required CTA.
+- **New visitor / new learner** — sees a landing-and-start experience with a small interactive listening demo, clear language selection, how-it-works steps, product benefits, honest course-depth information and a no-account-required CTA.
 - **Returning learner** — after the first real practice event, the same home page becomes the dashboard with Continue Learning, Today's Practice, XP goal, streak, reviews and course progress.
 
-Choosing a language for the first time opens communication practice directly. Passive demo interaction does not create XP or progress. The visitor/learner state is derived from real practice history, so resetting a course does not make an established learner look like a brand-new visitor again.
+## V13 progressive learning experience
+
+The internal course experience is designed around a gradual learning journey instead of exposing every tool as an equal first step.
+
+Primary course navigation is now:
+
+- **Journey** — the recommended next unit and guided beginner flow
+- **Practice** — adaptive listening/speaking practice for already introduced material
+- **Review** — weak/due material, recall cards and recognition checks
+- **Explore** — full lesson notes, language guide, vocabulary and optional writing tools
+- **Progress** — skill and course progress
+
+Normal language entry opens Journey. A new learner starts with Unit 1 and learns one item through a small sequence:
+
+1. **Listen** before reading the answer.
+2. **Understand** the form, meaning and pronunciation note.
+3. **Check** comprehension with an active listening/recognition question.
+4. **Speak** the item aloud, optionally using browser speech recognition.
+5. **Complete** the item and continue gradually.
+
+Later units begin locked and unlock from real unit evidence rather than XP. The readiness calculation combines how much of the unit has actually been practised with assessed active mastery. This is a soft curriculum gate: supporting tools remain available through Explore/Review even when a later guided unit is not recommended yet.
 
 ## Learning experience
 
 - Listen-first and speak-early practice
+- Progressive Journey for new-language learning
 - Browser text-to-speech with Auto / female-preferred / male-preferred / exact-device voice choice
 - Browser speech-recognition practice where supported
 - Japanese and Mandarin staged beginner → advanced-topic curriculum paths
@@ -42,12 +63,14 @@ The application runtime is split into ES modules under `src/`:
 - `src/data.js` — normalized course data, structural target IDs and stage-aware practice targets
 - `src/audio.js` — TTS and device voice selection
 - `src/practice.js` — listening, shadowing, speak-from-meaning and stage-aware conversation practice
-- `src/course.js` — lessons, guide, writing, vocabulary, cards, quiz and progress
+- `src/course.js` — detailed lesson notes, guide, writing, vocabulary, cards, quiz and progress
+- `src/journey.js` — V13 unit readiness, progressive path, guided lesson sequence, Review and Explore hubs
 - `src/home.js` — V12 first-visit experience plus returning learner dashboard
 - `src/auth-ui.js` — sign-in, onboarding, Guest import and language management
 - `src/writing.js` — touch/stylus/mouse practice pad
 - `src/utils.js` — shared pure utilities
-- `home-v12.css` — isolated first-visit/returning-home presentation rules
+- `home-v12.css` — first-visit/returning-home presentation rules
+- `journey-v13.css` — progressive internal-course presentation rules
 
 The historical runtime monkey-patching, cloned-button overrides, periodic position writer and snapshot MAX merge are gone. V7/V8/V9 files that remain are course-content authoring layers only.
 
@@ -68,14 +91,16 @@ Normal cloud reconciliation fetches learning events incrementally from the last 
 
 RLS restricts authenticated users to their own rows. The browser publishable Supabase key is intentionally public; service-role keys and database passwords must never be committed.
 
-## Progress rules
+## Progress and unlock rules
 
 - Passive audio playback and the homepage demo do **not** award XP or mastery.
 - Active attempts generate learning events.
+- Guided Journey comprehension records listening and recognition evidence; speaking records assessed transcript-match evidence when the browser supports it, otherwise speaking can be recorded only as unscored practice coverage.
 - Same/lower repeated scored attempts on the same target/skill/day do not award more local XP.
 - Derived XP groups target + skill + day and counts the best XP delta, preventing duplicate offline attempts from double-counting after multi-device convergence.
 - Writing practice records effort/coverage, not a fabricated handwriting-accuracy percentage.
 - Overall/unit mastery uses assessed communication skills only.
+- A next unit unlocks only after the previous unit reaches enough practice coverage and readiness; XP alone cannot unlock it.
 - Reset is append-only: a reset event invalidates older course events without deleting the reset marker from cloud history.
 - Course-position conflict handling keeps the newest `client_updated_at` value.
 - Preference sync tracks dirty fields independently instead of pushing a full stale preference snapshot.
@@ -89,7 +114,7 @@ Practice vocabulary and lesson targets are filtered by the selected stage. Legac
 
 ## Offline behavior
 
-The service worker caches the local application shell, the V12 home stylesheet and a pinned Supabase browser runtime while leaving Supabase API/auth requests uncached. This allows an already-installed app to start offline without accidentally dropping a previously signed-in browser into a different runtime because the CDN script is unavailable.
+The service worker caches the local application shell, home and Journey styles/modules, and a pinned Supabase browser runtime while leaving Supabase API/auth requests uncached. This allows an already-installed app to start offline without accidentally dropping a previously signed-in browser into a different runtime because the CDN script is unavailable.
 
 ## Important limitations
 
@@ -107,7 +132,7 @@ npm run ci
 npm run e2e
 ```
 
-CI covers syntax/module/DOM/PWA/migration checks plus Playwright desktop Chromium, Android emulation, iPhone WebKit emulation, mocked account/cross-device flows, Guest import, IndexedDB persistence, first-visit → dashboard transition and a real service-worker offline shell test.
+CI covers syntax/module/DOM/PWA checks plus Playwright desktop Chromium, Android emulation, iPhone WebKit emulation, guided Journey behavior, mocked account/cross-device flows, Guest import, IndexedDB persistence, first-visit → dashboard transition and a real service-worker offline shell test.
 
 ## Hosting
 

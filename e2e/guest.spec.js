@@ -59,7 +59,7 @@ test('correct gradual practice unlocks the next unit only after enough coverage'
   await completeGuidedItemCorrectly(page);
   await completeGuidedItemCorrectly(page);
   await completeGuidedItemCorrectly(page,{moveNext:false});
-  await page.locator('[data-lesson-action="back-path"]').click();
+  await page.locator('.guided-top-v13 [data-lesson-action="back-path"]').click();
   await expect(page.locator('[data-journey-unit="1"]')).toBeEnabled();
   await expect(page.locator('[data-journey-unit="0"]')).toContainText('Building');
 });

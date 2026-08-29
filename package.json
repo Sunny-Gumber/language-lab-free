@@ -1,7 +1,7 @@
 {
   "name": "language-lab-free",
   "private": true,
-  "version": "13.2.0",
+  "version": "13.1.0",
   "type": "module",
   "description": "Mobile-first progressive language learning app with adaptive mixed sessions, retrieval practice and IndexedDB-backed event sync",
   "scripts": {

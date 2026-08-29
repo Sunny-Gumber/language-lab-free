@@ -4,6 +4,45 @@ const rawCourses=globalThis.LANGUAGE_LAB_COURSES;
 if(!Array.isArray(rawCourses)||!rawCourses.length)throw new Error('Course data did not load.');
 
 const safeKey=value=>String(value??'').trim().replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
+
+/*
+ * Stamp the positional fallback identity BEFORE any pedagogical reordering.
+ * V11 used uN/iN/vN when authored keys were absent. Keeping that identity here
+ * means we can change the visible curriculum order without changing existing
+ * learning-event target IDs or accidentally deriving duplicate IDs from repeated
+ * romanization/native text.
+ */
+function stampStableFallbackIds(language){
+  (language.units||[]).forEach((unit,unitIndex)=>{
+    if(!unit.key&&!unit.authorId)unit.authorId=`u${unitIndex+1}`;
+    (unit.items||[]).forEach((item,itemIndex)=>{if(!item.key&&!item.authorId)item.authorId=`i${itemIndex+1}`});
+  });
+  (language.vocab||[]).forEach((word,index)=>{if(!word.key&&!word.authorId)word.authorId=`v${index+1}`});
+}
+rawCourses.forEach(stampStableFallbackIds);
+
+function reorderByTitles(language,titles){
+  const remaining=[...(language.units||[])],ordered=[];
+  for(const title of titles){const index=remaining.findIndex(unit=>unit.title===title);if(index>=0)ordered.push(remaining.splice(index,1)[0])}
+  language.units=[...ordered,...remaining];
+}
+function applyPedagogicalOrder(language){
+  if(language.id==='ja'){
+    const starter=[
+      'Japanese Sound System','Greetings & Polite Basics','Introduce Yourself','Hiragana K Row','First Sentence Patterns','Hiragana S Row','Numbers & Time Basics',
+      'Hiragana T & N Rows','Hiragana H & M Rows','Complete Basic Hiragana','Voiced Sounds & Small っ','Contracted Sounds','Katakana Foundations'
+    ];
+    reorderByTitles(language,starter);
+    language.units.slice(0,starter.length).forEach((unit,index)=>{unit.stage=index<=6?'beginner-1':'beginner-2'});
+    const stages=language.curriculum?.stages||[];
+    const beginner1=stages.find(stage=>stage.id==='beginner-1'),beginner2=stages.find(stage=>stage.id==='beginner-2');
+    if(beginner1)Object.assign(beginner1,{startUnit:0,endUnit:6,description:'Sound, greetings, self-introduction and first kana'});
+    if(beginner2)Object.assign(beginner2,{startUnit:7,endUnit:starter.length-1,description:'More kana, numbers, sentence patterns and Katakana'});
+  }
+  if(language.id==='zh')reorderByTitles(language,['Pinyin & Four Tones','Greetings & Basic Questions','First Characters']);
+}
+rawCourses.forEach(applyPedagogicalOrder);
+
 function rawStages(language){
   const stages=(language.curriculum?.stages||[]).filter(stage=>stage.available!==false);
   return stages.length?stages:[{id:'foundation',label:'Foundation',description:'Current course',startUnit:0,endUnit:Math.max(0,(language.units||[]).length-1),available:true}];
@@ -79,8 +118,11 @@ export function allTargetIds(course){return unique([...course.units.flatMap(unit
 
 function validateCourseIds(){
   for(const course of courses){
-    const ids=allTargetIds(course),expected=course.units.reduce((sum,unit)=>sum+unit.items.length,0)+course.vocab.length;
-    if(ids.length!==expected)throw new Error(`Duplicate learning target IDs in ${course.id}.`);
+    const raw=[...course.units.flatMap(unit=>unit.items.map(item=>item.id)),...course.vocab.map(word=>word.id)],ids=unique(raw);
+    if(ids.length!==raw.length){
+      const seen=new Set(),duplicates=raw.filter(id=>seen.has(id)||!seen.add(id));
+      throw new Error(`Duplicate learning target IDs in ${course.id}: ${[...new Set(duplicates)].join(', ')}`);
+    }
   }
 }
 validateCourseIds();

@@ -5,6 +5,7 @@ import{HomeController}from'./home.js';
 import{PracticeController}from'./practice.js';
 import{CourseController}from'./course.js';
 import{JourneyController}from'./journey.js';
+import{HindiPronunciationController}from'./pronunciation-hi.js';
 
 const $=id=>document.getElementById(id);
 let renderQueued=false;
@@ -36,6 +37,7 @@ async function boot(){
   const practice=new PracticeController();
   const course=new CourseController(practice);
   const journey=new JourneyController(course,practice);
+  new HindiPronunciationController(course,practice);
   const account=new AccountUi();
   const hasPractice=()=>getState().events.some(event=>event?.activity==='practice');
   const openJourney=code=>{
@@ -66,7 +68,7 @@ async function boot(){
   if(isSignedIn()&&getState().prefs.dirty)syncNow('boot').catch(()=>{});
   registerServiceWorker();
 
-  window.LanguageLab={version:'13.1',getState:()=>structuredClone(getState()),user:()=>getUser(),sync:()=>syncNow('manual')};
+  window.LanguageLab={version:'13.2',getState:()=>structuredClone(getState()),user:()=>getUser(),sync:()=>syncNow('manual')};
 }
 
 boot().catch(error=>{

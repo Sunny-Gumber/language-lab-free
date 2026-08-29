@@ -1,9 +1,9 @@
 {
   "name": "language-lab-free",
   "private": true,
-  "version": "12.0.0",
+  "version": "13.0.0",
   "type": "module",
-  "description": "Mobile-first language learning app with a first-visit start experience and IndexedDB-backed event sync",
+  "description": "Mobile-first progressive language learning app with guided journeys, adaptive practice and IndexedDB-backed event sync",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "check": "node scripts/check-syntax.js",

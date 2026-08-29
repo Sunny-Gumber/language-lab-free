@@ -13,6 +13,16 @@ async function completeFirstGuidedCheck(page){
   await page.locator('[data-lesson-answer]').first().click();
   await expect.poll(()=>page.evaluate(()=>window.LanguageLab.getState().events.filter(event=>event.activity==='practice').length)).toBeGreaterThanOrEqual(2);
 }
+async function completeGuidedItemCorrectly(page,{moveNext=true}={}){
+  await page.locator('[data-lesson-action="continue"]').click();
+  const meaning=(await page.locator('.guided-meaning-v13').textContent())?.trim();
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-answer]').filter({hasText:meaning}).first().click();
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-action="manual-speak"]').click();
+  await page.locator('[data-lesson-action="continue"]').click();
+  if(moveNext)await page.locator('[data-lesson-action="next-item"]').click();
+}
 
 test.beforeEach(async({page})=>{await blockExternal(page)});
 
@@ -40,6 +50,18 @@ test('new language opens a gradual journey with later units gated',async({page})
   await expect(page.locator('[data-journey-unit="0"]')).toBeEnabled();
   await expect(page.locator('[data-journey-unit="1"]')).toBeDisabled();
   await expect(page.locator('.v13-tabs [data-tab]')).toHaveCount(5);
+});
+
+test('correct gradual practice unlocks the next unit only after enough coverage',async({page},testInfo)=>{
+  test.skip(testInfo.project.name!=='desktop-chromium','Progression threshold is exercised once on desktop Chromium.');
+  await page.goto('/');await waitForBoot(page);await page.locator('[data-language="ja"]').click();
+  await page.locator('[data-journey-start]').first().click();
+  await completeGuidedItemCorrectly(page);
+  await completeGuidedItemCorrectly(page);
+  await completeGuidedItemCorrectly(page,{moveNext:false});
+  await page.locator('[data-lesson-action="back-path"]').click();
+  await expect(page.locator('[data-journey-unit="1"]')).toBeEnabled();
+  await expect(page.locator('[data-journey-unit="0"]')).toContainText('Ready');
 });
 
 test('first guided comprehension turns the start experience into the learner dashboard',async({page})=>{

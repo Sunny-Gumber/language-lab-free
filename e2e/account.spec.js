@@ -2,13 +2,14 @@ import{test,expect}from'@playwright/test';
 import{blockExternal,installMockSupabase}from'./helpers.js';
 
 async function waitForBoot(page){
-  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('13.0');
+  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('13.1');
   await expect(page.locator('.fatal-error')).toHaveCount(0);
 }
 async function createGuidedGuestProgress(page){
   await page.locator('[data-language="ja"]').click();
   await expect(page.locator('#journeyTab')).toHaveClass(/active/);
   await page.locator('[data-journey-start]').first().click();
+  await page.locator('[data-lesson-action="continue"]').click();
   await page.locator('[data-lesson-action="continue"]').click();
   await page.locator('[data-lesson-action="continue"]').click();
   await page.locator('[data-lesson-answer]').first().click();

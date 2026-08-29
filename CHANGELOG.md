@@ -6,6 +6,11 @@ This changelog was initialized from the repository's existing release commits an
 
 ## Unreleased
 
+### Fixes
+
+- Japanese browser speech matching now treats common Kanji, Hiragana and Katakana renderings of the same spoken target as equivalent, preventing false 0% results such as browser-heard `犬` versus lesson target `いぬ`.
+- The change remains transcript matching only; it does not claim phoneme-level accent or pronunciation grading.
+
 ### Documentation
 
 - Added `AGENTS.md` for ChatGPT/Codex development rules and regression-sensitive contracts.

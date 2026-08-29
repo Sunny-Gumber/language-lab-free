@@ -4,22 +4,6 @@ const rawCourses=globalThis.LANGUAGE_LAB_COURSES;
 if(!Array.isArray(rawCourses)||!rawCourses.length)throw new Error('Course data did not load.');
 
 const safeKey=value=>String(value??'').trim().replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
-const speechRomanKey=value=>String(value??'').normalize('NFKC').toLocaleLowerCase().replace(/\s+/g,'').replace(/[^\p{L}\p{N}]+/gu,'');
-
-/*
- * Browser Japanese speech recognition often returns common words in Kanji even
- * when a beginner lesson intentionally displays Kana. These are recognition
- * aliases only: they do not change the course's visible script progression.
- * Future authored `kanjiForm` / `speechForms` fields are picked up automatically
- * by speechFormsFor(), so this bridge can shrink as content becomes richer.
- */
-const JAPANESE_RECOGNITION_ALIASES={
-  asa:['朝'],ao:['青'],inu:['犬'],umi:['海'],eki:['駅'],oto:['音'],kao:['顔'],kiku:['聞く','聴く'],kuchi:['口'],kesa:['今朝'],
-  sakana:['魚'],shio:['塩'],sekai:['世界'],soto:['外'],taberu:['食べる'],chizu:['地図'],tsuki:['月'],te:['手'],toki:['時'],namae:['名前'],niku:['肉'],neko:['猫'],
-  hana:['花','鼻'],hito:['人'],fuyu:['冬'],heya:['部屋'],hon:['本'],machi:['町','街'],mizu:['水'],mushi:['虫'],me:['目'],yama:['山'],yuki:['雪'],yoru:['夜'],
-  rainen:['来年'],ringo:['林檎'],kuruma:['車'],rekishi:['歴史'],roku:['六'],watashi:['私'],gakusei:['学生'],zasshi:['雑誌'],dare:['誰'],bangou:['番号'],
-  kitte:['切手'],kyaku:['客'],kyuu:['九'],kyou:['今日'],shashin:['写真'],shumi:['趣味'],shokudou:['食堂'],ohayou:['お早う'],arigatou:['有難う'],sumimasen:['済みません']
-};
 
 /*
  * Stamp the positional fallback identity BEFORE any pedagogical reordering.
@@ -130,39 +114,6 @@ export function practiceTargets(course,skill,stageId=null){
   const seen=new Set();
   return raw.filter(target=>{const key=`${target.id}|${target.native}|${target.meaning}`;if(!target.native||seen.has(key))return false;seen.add(key);return true});
 }
-
-function addSpeechFields(forms,entity,useExample=true){
-  if(!entity)return;
-  const example=useExample?entity.example:null;
-  const native=example?.native||entity.native;
-  const kanji=example?.kanjiForm||example?.kanji||(!example?.native?(entity.kanjiForm||entity.kanji):null);
-  forms.push(native,kanji,...(example?.speechForms||[]),...(!example?.native?(entity.speechForms||[]):[]));
-}
-export function speechFormsFor(course,target){
-  if(!target)return[];
-  const forms=[],isPracticeTarget=Boolean(target.source||target.word);
-  if(isPracticeTarget){
-    forms.push(target.native,target.kanjiForm,target.kanji,...(target.speechForms||[]));
-    if(target.word)addSpeechFields(forms,target.word,false);
-    if(target.item){
-      const sameAsExample=String(target.native||'')===String(target.item.example?.native||'');
-      addSpeechFields(forms,target.item,sameAsExample);
-    }
-  }else addSpeechFields(forms,target,true);
-
-  const roman=String(isPracticeTarget?target.roman:(target.example?.roman||target.roman)||'').trim();
-  if(roman)forms.push(roman);
-  const romanKey=speechRomanKey(roman);
-  if(romanKey){
-    for(const word of course?.vocab||[]){
-      if(speechRomanKey(word.roman)!==romanKey)continue;
-      forms.push(word.native,word.kanjiForm,word.kanji,...(word.speechForms||[]));
-    }
-    if(course?.id==='ja')forms.push(...(JAPANESE_RECOGNITION_ALIASES[romanKey]||[]));
-  }
-  return unique(forms.map(value=>String(value??'').trim()).filter(Boolean));
-}
-
 export function allTargetIds(course){return unique([...course.units.flatMap(unit=>unit.items.map(item=>item.id)),...course.vocab.map(word=>word.id)])}
 
 function validateCourseIds(){

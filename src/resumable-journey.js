@@ -1,8 +1,9 @@
 import{findItem,getCourse}from'./data.js';
-import{learningEvents}from'./learning.js';
+import{learningEvents,recordPractice}from'./learning.js';
 import{getState,updateUi}from'./store.js';
 import{buildJourneySession}from'./session.js';
 import{escapeHtml}from'./utils.js';
+import{speechMatchLabel,speechTranscriptMatch}from'./speech-match.js';
 import{JourneyController as BaseJourneyController}from'./journey.js';
 
 const SNAPSHOT_KEYS=['step','answered','answerCorrect','selectedAnswer','options','recallAnswered','recallCorrect','recallSelected','recallOptions','speakingDone','speakingMessage','showModel','needsRetry'];
@@ -15,6 +16,7 @@ function lastResetAt(languageCode){
 function itemMeaning(item){return item?.example?.meaning||item?.guide||item?.pron||''}
 function itemPhrase(item){return item?.example?.native||item?.native||''}
 function itemRoman(item){return item?.example?.roman||item?.roman||''}
+function itemAliases(item){return[...(item?.speechAliases||[]),...(item?.example?.speechAliases||[])]}
 
 export class JourneyController extends BaseJourneyController{
   snapshotCore(){
@@ -66,12 +68,29 @@ export class JourneyController extends BaseJourneyController{
     }
     this.lesson=null;this.render('journey');return false;
   }
+  recognizeLesson(){
+    const item=this.lessonItem(),Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!Recognition){this.lesson.speakingMessage='Microphone speech recognition is unavailable here. Reveal the model, practise aloud, then use the manual option.';this.renderLesson();return}
+    if(this.recognizer){try{this.recognizer.abort()}catch{}}
+    const recognizer=new Recognition();this.recognizer=recognizer;recognizer.lang=this.course.locale;recognizer.interimResults=false;recognizer.maxAlternatives=5;
+    const button=document.querySelector('#journeyTab [data-lesson-action="mic"]');if(button){button.disabled=true;button.textContent='🎙 Listening…'}
+    recognizer.onerror=event=>{this.lesson.speakingMessage=`Speech recognition: ${event.error}`;this.renderLesson()};
+    recognizer.onresult=event=>{
+      const heard=event.results[0][0].transcript,transcripts=[...event.results[0]].map(result=>result.transcript),target=itemPhrase(item);
+      const match=speechTranscriptMatch(this.course,transcripts,target,{aliases:itemAliases(item)}),score=Math.round(match.score*100),xp=score>=85?8:score>=60?4:1,label=speechMatchLabel(match,target);
+      recordPractice({languageCode:this.course.id,targetId:item.id,skill:'speaking',score,xp,metadata:{mode:'guided-journey',heard,matchedExpected:match.expected,equivalentSpelling:match.equivalent,task:this.lesson.plan.canDo}});
+      this.lesson.speakingDone=true;this.lesson.speakingMessage=`Browser heard: <b>${escapeHtml(heard)}</b><br>Text match: <b>${score}%</b>.${label?`<br><span class="tiny muted">${escapeHtml(label)}</span>`:''}<br><span class="tiny muted">This is a speech-to-text match, not pronunciation grading.</span>`;this.renderLesson();
+    };
+    try{recognizer.start()}catch(error){this.lesson.speakingMessage=`Speech recognition could not start: ${error?.message||error}`;this.renderLesson()}
+  }
   renderLesson(){
     super.renderLesson();
     if(!this.lesson)return;
     this.persistLesson();
+    const item=this.lessonItem(),taskPrompt=document.querySelector('#journeyTab .task-prompt-v13');
+    if(Number(this.lesson.step)===5&&item&&taskPrompt)taskPrompt.innerHTML=`Say in ${escapeHtml(this.course.name)}: <b>${escapeHtml(itemMeaning(item))}</b>`;
     const entry=this.currentQueueEntry();if(!entry||entry.unitIndex===this.lesson.unitIndex||!['review','retry'].includes(entry.kind))return;
-    const source=this.course.units[entry.unitIndex],item=this.lessonItem(),top=document.querySelector('#journeyTab .guided-top-v13');if(!source||!item||!top)return;
+    const source=this.course.units[entry.unitIndex],top=document.querySelector('#journeyTab .guided-top-v13');if(!source||!item||!top)return;
     const note=document.createElement('div');note.className='guided-tip-v13 review-source-v13';
     const reveal=Number(this.lesson.step)>=2;
     note.innerHTML=`<b>↻ Review from Unit ${entry.unitIndex+1} · ${escapeHtml(source.title)}</b><span>${reveal?`${escapeHtml(itemPhrase(item))}${itemRoman(item)?` · ${escapeHtml(itemRoman(item))}`:''}${itemMeaning(item)?` — ${escapeHtml(itemMeaning(item))}`:''}`:'This older item is returning on purpose before today’s new material.'}</span>`;

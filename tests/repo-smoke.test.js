@@ -21,7 +21,7 @@ test('index loads the clean module entry point and required course data',()=>{
 
 test('every relative ES-module import resolves to a file',()=>{
   const srcDir=path.join(root,'src'),modules=srcModules();
-  assert.ok(modules.length>=12);
+  assert.ok(modules.length>=13);
   for(const module of modules){
     const code=read(path.join('src',module));
     for(const match of code.matchAll(/from['"](\.\/[^'"]+)['"]/g)){
@@ -42,7 +42,7 @@ test('literal DOM ids used by modules are declared or created intentionally',()=
     ...[...code.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]),
     ...[...code.matchAll(/\bid=\\?"([^\\"]+)\\?"/g)].map(match=>match[1])
   ]);
-  const known=new Set([...pageIds,...dynamicIds,'visitorTopNav','visitorHow','languagesSection','journeyTab','reviewTab','exploreTab','guidedFeedback']);
+  const known=new Set([...pageIds,...dynamicIds,'visitorTopNav','visitorHow','languagesSection','journeyTab','reviewTab','exploreTab']);
   for(const{name,code}of modules){
     const refs=new Set([
       ...[...code.matchAll(/\$\(['"]([^'"]+)['"]\)/g)].map(match=>match[1]),
@@ -70,63 +70,44 @@ test('V12 home separates first-visit start UX from learner dashboard',()=>{
   assert.match(home,/Keep your language/);
 });
 
-test('V13 course uses a progressive Journey as the normal entry point',()=>{
-  assert.ok(exists('src/journey.js'));
-  assert.ok(exists('journey-v13.css'));
-  const app=read('src/app.js'),journey=read('src/journey.js');
-  assert.match(app,/JourneyController/);
-  assert.match(app,/tab:'journey'/);
-  assert.match(app,/version:'13\.0'/);
-  assert.match(journey,/Journey/);
-  assert.match(journey,/Practice/);
-  assert.match(journey,/Review/);
-  assert.match(journey,/Explore/);
-  assert.match(journey,/Progress/);
-  assert.match(journey,/allowNext/);
-  assert.match(journey,/coverage>=60/);
-  assert.match(journey,/guided-journey/);
+test('V13.1 course uses Journey and adaptive mixed sessions as the normal entry point',()=>{
+  assert.ok(exists('src/journey.js'));assert.ok(exists('src/session.js'));assert.ok(exists('journey-v13.css'));
+  const app=read('src/app.js'),journey=read('src/journey.js'),session=read('src/session.js');
+  assert.match(app,/JourneyController/);assert.match(app,/tab:'journey'/);assert.match(app,/version:'13\.1'/);
+  for(const label of['Journey','Practice','Review','Explore','Progress'])assert.match(journey,new RegExp(label));
+  assert.match(journey,/allowNext/);assert.match(journey,/coverage>=60/);assert.match(journey,/guided-journey/);
+  assert.match(session,/sessionMixFromEvents/);assert.match(session,/accuracy<60/);assert.match(session,/review:4,newItems:1/);assert.match(session,/review:2,newItems:3/);
 });
 
-test('V13 guided journey records active comprehension and speaking evidence',()=>{
-  const journey=read('src/journey.js');
-  assert.match(journey,/skill:'listening'/);
-  assert.match(journey,/skill:'recognition'/);
-  assert.match(journey,/skill:'speaking'/);
-  assert.match(journey,/Listen before you read/);
-  assert.match(journey,/Now connect sound to meaning/);
-  assert.match(journey,/Use it aloud/);
+test('V13.1 guided journey follows context input retrieval use and spaced return',()=>{
+  const journey=read('src/journey.js'),session=read('src/session.js');
+  for(const skill of['listening','recognition','recall','speaking'])assert.match(journey,new RegExp(`skill:'${skill}'`));
+  assert.match(journey,/real-world goal/);assert.match(journey,/Listen before you read/);assert.match(journey,/Active recall/);assert.match(journey,/Mini real-world task/);
+  assert.match(journey,/needsRetry/);assert.match(journey,/kind:'retry'/);assert.match(journey,/questionKind:'meaning'/);assert.match(journey,/questionKind:'recall'/);
+  assert.match(session,/mistakeChoices/);assert.match(session,/shouldShowRoman/);assert.match(session,/Japanese pathway/);assert.match(session,/Mandarin pathway/);
 });
 
 test('V11.2 uses structural target IDs and stage-aware practice data',()=>{
   const data=read('src/data.js');
-  assert.match(data,/structuralItemId/);
-  assert.match(data,/stageId/);
-  assert.match(data,/conversationItems/);
-  assert.equal(data.includes('hashString'),false);
+  assert.match(data,/structuralItemId/);assert.match(data,/stageId/);assert.match(data,/conversationItems/);assert.equal(data.includes('hashString'),false);
 });
 
 test('event history is backed by IndexedDB rather than localStorage snapshots',()=>{
   assert.ok(exists('src/event-db.js'));
   const store=read('src/store.js');
-  assert.match(store,/from'\.\/event-db\.js'/);
-  assert.match(store,/events:\[\]/);
-  assert.match(store,/eventCursor/);
+  assert.match(store,/from'\.\/event-db\.js'/);assert.match(store,/events:\[\]/);assert.match(store,/eventCursor/);
 });
 
-test('service worker caches only known app assets, progressive CSS, pinned Supabase runtime and bypasses API traffic',()=>{
+test('service worker caches only known app assets, adaptive Journey, pinned Supabase runtime and bypasses API traffic',()=>{
   const sw=read('sw.js');
   const match=sw.match(/const ASSETS=\[(.*?)\];/s);assert.ok(match,'ASSETS list missing');
   const refs=[...match[1].matchAll(/['"]\.\/([^'"]*)['"]/g)].map(item=>item[1]).filter(Boolean);
   for(const ref of refs)assert.ok(exists(ref),`Missing cached asset: ${ref}`);
   assert.ok(refs.includes('home-v12.css'),'Home stylesheet is not cached');
-  assert.ok(refs.includes('journey-v13.css'),'V13 journey stylesheet is not cached');
-  assert.ok(refs.includes('src/journey.js'),'V13 journey module is not cached');
-  assert.match(sw,/language-lab-free-v13/);
-  assert.match(sw,/url\.origin!==self\.location\.origin/);
-  assert.match(sw,/SUPABASE_PINNED/);
-  assert.match(sw,/@supabase\/supabase-js@2\.112\.3/);
-  assert.match(sw,/self\.skipWaiting\(\)/);
-  assert.match(sw,/self\.clients\.claim\(\)/);
+  assert.ok(refs.includes('journey-v13.css'),'Journey stylesheet is not cached');
+  assert.ok(refs.includes('src/journey.js'),'Journey module is not cached');
+  assert.ok(refs.includes('src/session.js'),'Adaptive session module is not cached');
+  assert.match(sw,/language-lab-free-v13-1/);assert.match(sw,/url\.origin!==self\.location\.origin/);assert.match(sw,/SUPABASE_PINNED/);assert.match(sw,/@supabase\/supabase-js@2\.112\.3/);assert.match(sw,/self\.skipWaiting\(\)/);assert.match(sw,/self\.clients\.claim\(\)/);
 });
 
 test('manifest icon files exist',()=>{

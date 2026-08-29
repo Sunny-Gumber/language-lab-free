@@ -1,4 +1,4 @@
-import{initializeStore,getState,subscribe}from'./store.js';
+import{initializeStore,getPosition,getState,setPosition,subscribe}from'./store.js';
 import{initializeCloud,subscribeAuth,subscribeStatus,getUser,isSignedIn,syncNow}from'./cloud.js';
 import{AccountUi}from'./auth-ui.js';
 import{HomeController}from'./home.js';
@@ -38,7 +38,12 @@ async function boot(){
   const journey=new JourneyController(course,practice);
   const account=new AccountUi();
   const hasPractice=()=>getState().events.some(event=>event?.activity==='practice');
-  const openJourney=code=>{course.open(code,{tab:'journey'});journey.open(code)};
+  const openJourney=code=>{
+    const saved=getPosition(code);
+    course.open(code,{tab:'journey'});
+    journey.open(code);
+    if(saved.clientUpdatedAt)setPosition(code,saved.unitIndex,saved.itemIndex);
+  };
   const openPractice=code=>{if(hasPractice())course.openPractice(code);else openJourney(code)};
   const home=new HomeController({openCourse:openJourney,openPractice});
 

@@ -1,9 +1,9 @@
-const CACHE='language-lab-free-v13';
+const CACHE='language-lab-free-v13-1';
 const SUPABASE_PINNED='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.min.js';
 const ASSETS=[
   './','./index.html','./styles.css','./home-v12.css','./journey-v13.css','./app.js','./manifest.webmanifest','./icon.svg',
   './languages.js','./v7-content.js','./v8-content.js','./v9-content.js','./course-export.js',
-  './src/app.js','./src/utils.js','./src/data.js','./src/event-db.js','./src/store.js','./src/cloud.js','./src/learning.js',
+  './src/app.js','./src/utils.js','./src/data.js','./src/event-db.js','./src/store.js','./src/cloud.js','./src/learning.js','./src/session.js',
   './src/audio.js','./src/writing.js','./src/auth-ui.js','./src/home.js','./src/practice.js','./src/course.js','./src/journey.js'
 ];
 const STATIC_PATHS=new Set(ASSETS.map(asset=>new URL(asset,self.location.href).pathname));

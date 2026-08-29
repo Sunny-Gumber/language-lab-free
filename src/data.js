@@ -4,6 +4,23 @@ const rawCourses=globalThis.LANGUAGE_LAB_COURSES;
 if(!Array.isArray(rawCourses)||!rawCourses.length)throw new Error('Course data did not load.');
 
 const safeKey=value=>String(value??'').trim().replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
+
+/*
+ * Stamp the positional fallback identity BEFORE any pedagogical reordering.
+ * V11 used uN/iN/vN when authored keys were absent. Keeping that identity here
+ * means we can change the visible curriculum order without changing existing
+ * learning-event target IDs or accidentally deriving duplicate IDs from repeated
+ * romanization/native text.
+ */
+function stampStableFallbackIds(language){
+  (language.units||[]).forEach((unit,unitIndex)=>{
+    if(!unit.key&&!unit.authorId)unit.authorId=`u${unitIndex+1}`;
+    (unit.items||[]).forEach((item,itemIndex)=>{if(!item.key&&!item.authorId)item.authorId=`i${itemIndex+1}`});
+  });
+  (language.vocab||[]).forEach((word,index)=>{if(!word.key&&!word.authorId)word.authorId=`v${index+1}`});
+}
+rawCourses.forEach(stampStableFallbackIds);
+
 function reorderByTitles(language,titles){
   const remaining=[...(language.units||[])],ordered=[];
   for(const title of titles){const index=remaining.findIndex(unit=>unit.title===title);if(index>=0)ordered.push(remaining.splice(index,1)[0])}
@@ -36,15 +53,15 @@ function rawStageForUnit(language,unit,index){
   return stages.find(stage=>index>=Math.max(0,Number(stage.startUnit)||0)&&index<=Number(stage.endUnit??language.units.length-1))?.id||stages[0]?.id||'foundation';
 }
 function structuralItemId(language,unit,item,unitIndex,itemIndex){
-  const unitKey=safeKey(unit.key||unit.authorId||unit.title)||`u${unitIndex+1}`;
-  const itemKey=safeKey(item.key||item.authorId||item.roman||item.native)||`i${itemIndex+1}`;
+  const unitKey=safeKey(unit.key||unit.authorId)||`u${unitIndex+1}`;
+  const itemKey=safeKey(item.key||item.authorId)||`i${itemIndex+1}`;
   return`item:${language.id}:${unitKey}:${itemKey}`;
 }
-function structuralVocabId(language,word,index){const key=safeKey(word.key||word.authorId||word.roman||word.native)||`v${index+1}`;return`vocab:${language.id}:${key}`}
+function structuralVocabId(language,word,index){const key=safeKey(word.key||word.authorId)||`v${index+1}`;return`vocab:${language.id}:${key}`}
 
 export const courses=rawCourses.map(language=>{
   language.units=(language.units||[]).map((unit,unitIndex)=>{
-    unit.id=`unit:${language.id}:${safeKey(unit.key||unit.authorId||unit.title)||`u${unitIndex+1}`}`;
+    unit.id=`unit:${language.id}:${safeKey(unit.key||unit.authorId)||`u${unitIndex+1}`}`;
     unit.index=unitIndex;
     unit.stageId=rawStageForUnit(language,unit,unitIndex);
     unit.items=(unit.items||[]).map((item,itemIndex)=>{
@@ -101,8 +118,11 @@ export function allTargetIds(course){return unique([...course.units.flatMap(unit
 
 function validateCourseIds(){
   for(const course of courses){
-    const ids=allTargetIds(course),expected=course.units.reduce((sum,unit)=>sum+unit.items.length,0)+course.vocab.length;
-    if(ids.length!==expected)throw new Error(`Duplicate learning target IDs in ${course.id}.`);
+    const raw=[...course.units.flatMap(unit=>unit.items.map(item=>item.id)),...course.vocab.map(word=>word.id)],ids=unique(raw);
+    if(ids.length!==raw.length){
+      const seen=new Set(),duplicates=raw.filter(id=>seen.has(id)||!seen.add(id));
+      throw new Error(`Duplicate learning target IDs in ${course.id}: ${[...new Set(duplicates)].join(', ')}`);
+    }
   }
 }
 validateCourseIds();

@@ -1,7 +1,7 @@
-const CACHE='language-lab-free-v11-2';
+const CACHE='language-lab-free-v12';
 const SUPABASE_PINNED='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.min.js';
 const ASSETS=[
-  './','./index.html','./styles.css','./app.js','./manifest.webmanifest','./icon.svg',
+  './','./index.html','./styles.css','./home-v12.css','./app.js','./manifest.webmanifest','./icon.svg',
   './languages.js','./v7-content.js','./v8-content.js','./v9-content.js','./course-export.js',
   './src/app.js','./src/utils.js','./src/data.js','./src/event-db.js','./src/store.js','./src/cloud.js','./src/learning.js',
   './src/audio.js','./src/writing.js','./src/auth-ui.js','./src/home.js','./src/practice.js','./src/course.js'

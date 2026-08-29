@@ -4,11 +4,12 @@ import{AccountUi}from'./auth-ui.js';
 import{HomeController}from'./home.js';
 import{PracticeController}from'./practice.js';
 import{CourseController}from'./course.js';
+import{JourneyController}from'./journey.js';
 
 const $=id=>document.getElementById(id);
 let renderQueued=false;
 
-function scheduleRender(home,account,course,practice){
+function scheduleRender(home,account,course,practice,journey){
   if(renderQueued)return;
   renderQueued=true;
   requestAnimationFrame(()=>{
@@ -18,6 +19,7 @@ function scheduleRender(home,account,course,practice){
     if($('courseScreen').classList.contains('active')){
       practice.renderSkills();
       course.renderProgress();
+      journey.render();
     }
   });
 }
@@ -33,18 +35,22 @@ async function boot(){
 
   const practice=new PracticeController();
   const course=new CourseController(practice);
+  const journey=new JourneyController(course,practice);
   const account=new AccountUi();
-  const home=new HomeController({openCourse:code=>course.open(code,{tab:'learn'}),openPractice:code=>course.openPractice(code)});
+  const hasPractice=()=>getState().events.some(event=>event?.activity==='practice');
+  const openJourney=code=>{course.open(code,{tab:'journey'});journey.open(code)};
+  const openPractice=code=>{if(hasPractice())course.openPractice(code);else openJourney(code)};
+  const home=new HomeController({openCourse:openJourney,openPractice});
 
-  subscribe(()=>scheduleRender(home,account,course,practice));
+  subscribe(()=>scheduleRender(home,account,course,practice,journey));
   subscribeStatus(status=>{$('syncStatus').textContent=status});
   subscribeAuth(()=>{
     account.checkOnboarding();
     account.offerGuestImport().catch(error=>console.warn('[Language Lab] Guest import check failed',error));
-    scheduleRender(home,account,course,practice);
+    scheduleRender(home,account,course,practice,journey);
   });
   window.addEventListener('language-lab-home-requested',()=>home.render());
-  window.addEventListener('language-lab-cloud-synced',()=>scheduleRender(home,account,course,practice));
+  window.addEventListener('language-lab-cloud-synced',()=>scheduleRender(home,account,course,practice,journey));
 
   home.render();account.renderAccountButton();
   await initializeCloud();
@@ -55,7 +61,7 @@ async function boot(){
   if(isSignedIn()&&getState().prefs.dirty)syncNow('boot').catch(()=>{});
   registerServiceWorker();
 
-  window.LanguageLab={version:'12.0',getState:()=>structuredClone(getState()),user:()=>getUser(),sync:()=>syncNow('manual')};
+  window.LanguageLab={version:'13.0',getState:()=>structuredClone(getState()),user:()=>getUser(),sync:()=>syncNow('manual')};
 }
 
 boot().catch(error=>{

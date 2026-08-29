@@ -13,6 +13,23 @@ async function openGuidedPronunciation(page,languageCode){
   await expect(page.locator('.guided-roman-v13')).toBeVisible();
   await expect(page.locator('.guided-roman-v13 [data-hindi-pronunciation]')).toBeVisible();
 }
+async function seedRecognitionMastery(page,languageCode){
+  await page.evaluate(async code=>{
+    const[{getCourse},{recordPractice}]=await Promise.all([import('./src/data.js'),import('./src/learning.js')]);
+    const target=getCourse(code).units[0].items[0];
+    recordPractice({languageCode:code,targetId:target.id,skill:'recognition',score:100,xp:0});
+  },languageCode);
+}
+
+async function openFadedGuidedPronunciation(page,languageCode){
+  await seedRecognitionMastery(page,languageCode);
+  await page.locator(`[data-language="${languageCode}"]`).click();
+  await page.locator('[data-journey-start]').first().click();
+  await page.locator('[data-lesson-action="continue"]').click();
+  await page.locator('[data-lesson-action="continue"]').click();
+  await expect(page.locator('.scaffold-faded-v13')).toBeVisible();
+  await expect(page.locator('[data-hindi-pronunciation-faded]')).toBeVisible();
+}
 
 test.beforeEach(async({page})=>{await blockExternal(page)});
 
@@ -35,4 +52,18 @@ test('Mandarin keeps Pinyin and adds Devanagari with tone guidance',async({page}
   expect(roman).toMatch(/[a-z]/i);
   await expect(page.locator('.guided-roman-v13 [data-hindi-pronunciation]')).toContainText('हिंदी उच्चारण (¹²³⁴ टोन):');
   await expect(page.locator('.guided-roman-v13 [data-hindi-pronunciation]')).toContainText(/[\u0900-\u097F]/);
+});
+
+test('Japanese keeps Hindi pronunciation visible after Romaji scaffold fades',async({page})=>{
+  await page.goto('/');await waitForBoot(page);await openFadedGuidedPronunciation(page,'ja');
+  await expect(page.locator('.guided-roman-v13')).toHaveCount(0);
+  await expect(page.locator('[data-hindi-pronunciation-faded]')).toContainText('हिंदी उच्चारण:');
+  await expect(page.locator('[data-hindi-pronunciation-faded]')).toContainText(/[\u0900-\u097F]/);
+});
+
+test('Mandarin keeps Hindi tone pronunciation visible after Pinyin scaffold fades',async({page})=>{
+  await page.goto('/');await waitForBoot(page);await openFadedGuidedPronunciation(page,'zh');
+  await expect(page.locator('.guided-roman-v13')).toHaveCount(0);
+  await expect(page.locator('[data-hindi-pronunciation-faded]')).toContainText('हिंदी उच्चारण (¹²³⁴ टोन):');
+  await expect(page.locator('[data-hindi-pronunciation-faded]')).toContainText(/[\u0900-\u097F]/);
 });

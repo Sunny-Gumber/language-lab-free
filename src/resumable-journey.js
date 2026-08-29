@@ -1,5 +1,6 @@
 import{findItem,getCourse}from'./data.js';
 import{learningEvents}from'./learning.js';
+import{hindiPronunciationLabel}from'./pronunciation-hi.js';
 import{getState,updateUi}from'./store.js';
 import{buildJourneySession}from'./session.js';
 import{escapeHtml}from'./utils.js';
@@ -66,10 +67,20 @@ export class JourneyController extends BaseJourneyController{
     }
     this.lesson=null;this.render('journey');return false;
   }
+  renderFadedHindiPronunciation(){
+    const faded=document.querySelector('#journeyTab .scaffold-faded-v13');
+    if(!faded||!['ja','zh'].includes(this.course?.id))return;
+    const roman=itemRoman(this.lessonItem()),label=hindiPronunciationLabel(this.course,roman);if(!label)return;
+    const existing=document.querySelector('#journeyTab [data-hindi-pronunciation-faded]');if(existing)existing.remove();
+    const line=document.createElement('b');line.dataset.hindiPronunciationFaded='true';line.lang='hi';line.className='guided-hindi-v13';line.textContent=label;
+    if(this.course.id==='zh')line.title='Mandarin tone guide: ¹ high/level, ² rising, ³ dipping, ⁴ falling. Audio remains the pronunciation reference.';
+    faded.insertAdjacentElement('afterend',line);
+  }
   renderLesson(){
     super.renderLesson();
     if(!this.lesson)return;
     this.persistLesson();
+    this.renderFadedHindiPronunciation();
     const entry=this.currentQueueEntry();if(!entry||entry.unitIndex===this.lesson.unitIndex||!['review','retry'].includes(entry.kind))return;
     const source=this.course.units[entry.unitIndex],item=this.lessonItem(),top=document.querySelector('#journeyTab .guided-top-v13');if(!source||!item||!top)return;
     const note=document.createElement('div');note.className='guided-tip-v13 review-source-v13';

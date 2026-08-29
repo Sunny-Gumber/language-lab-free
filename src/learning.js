@@ -17,6 +17,7 @@ const languageOf=event=>event.languageCode||event.language_code;
 const targetOf=event=>event.targetId||event.target_id;
 const xpOf=event=>Number(event.xpDelta??event.xp_delta??0);
 const studyDateOf=event=>event.studyDate||event.study_date||'';
+const scoreOf=event=>event?.score==null?null:Number.isFinite(Number(event.score))?Number(event.score):null;
 
 function resetCutoffs(){
   const cutoffs=new Map();
@@ -37,8 +38,8 @@ export function learningEvents(languageCode=null){
   return getState().events.filter(event=>event.activity==='practice'&&occurredAt(event)>(cutoffs.get(languageOf(event))||''));
 }
 function practiceAttempts(languageCode,targetId,skill){return learningEvents(languageCode).filter(event=>targetOf(event)===targetId&&event.skill===skill)}
-function scoredAttempts(languageCode,targetId,skill){return practiceAttempts(languageCode,targetId,skill).filter(event=>Number.isFinite(Number(event.score))).sort((a,b)=>occurredAt(a).localeCompare(occurredAt(b)))}
-function previousBestToday(languageCode,targetId,skill,date){return scoredAttempts(languageCode,targetId,skill).filter(event=>studyDateOf(event)===date).reduce((best,event)=>Math.max(best,Number(event.score)||0),0)}
+function scoredAttempts(languageCode,targetId,skill){return practiceAttempts(languageCode,targetId,skill).filter(event=>scoreOf(event)!=null).sort((a,b)=>occurredAt(a).localeCompare(occurredAt(b)))}
+function previousBestToday(languageCode,targetId,skill,date){return scoredAttempts(languageCode,targetId,skill).filter(event=>studyDateOf(event)===date).reduce((best,event)=>Math.max(best,scoreOf(event)||0),0)}
 function practicedToday(languageCode,targetId,skill,date){return practiceAttempts(languageCode,targetId,skill).some(event=>studyDateOf(event)===date)}
 
 export function recordPractice({languageCode,targetId,skill,score,xp=0,activity='practice',metadata={}}){
@@ -54,7 +55,7 @@ export function recordPractice({languageCode,targetId,skill,score,xp=0,activity=
 export function attempts(languageCode,targetId,skill){return scoredAttempts(languageCode,targetId,skill)}
 export function mastery(languageCode,targetId,skill){
   const recent=scoredAttempts(languageCode,targetId,skill).slice(-5);if(!recent.length)return 0;
-  let weighted=0,totalWeight=0;recent.forEach((event,index)=>{const weight=index+1;weighted+=Number(event.score)*weight;totalWeight+=weight});return Math.round(weighted/totalWeight);
+  let weighted=0,totalWeight=0;recent.forEach((event,index)=>{const weight=index+1;weighted+=(scoreOf(event)||0)*weight;totalWeight+=weight});return Math.round(weighted/totalWeight);
 }
 export function skillStats(languageCode,skill,stageId=null){
   const definition=SKILL_MAP.get(skill)||{assessed:true};
@@ -70,7 +71,7 @@ export function overallMastery(languageCode){
 }
 export function unitMastery(languageCode,unit){
   if(!unit?.items?.length)return 0;
-  const weightedSkills=[['listening',.40],['speaking',.30],['recognition',.15]],total=.85;
+  const weightedSkills=[['listening',.40],['speaking',.30],['recognition',.15],['recall',.10]],total=.95;
   const values=unit.items.map(item=>Math.round(weightedSkills.reduce((sum,[skill,weight])=>sum+mastery(languageCode,item.id,skill)*weight,0)/total));
   return Math.round(values.reduce((sum,value)=>sum+value,0)/values.length);
 }
@@ -78,10 +79,7 @@ export function stageMastery(languageCode,stageId){const course=getCourse(langua
 
 function deduplicatedXp(events){
   const best=new Map();
-  for(const event of events){
-    const key=`${studyDateOf(event)}|${languageOf(event)}|${targetOf(event)}|${event.skill||''}`;
-    best.set(key,Math.max(best.get(key)||0,xpOf(event)));
-  }
+  for(const event of events){const key=`${studyDateOf(event)}|${languageOf(event)}|${targetOf(event)}|${event.skill||''}`;best.set(key,Math.max(best.get(key)||0,xpOf(event)))}
   return[...best.values()].reduce((sum,value)=>sum+value,0);
 }
 export function totalXp(languageCode=null){return deduplicatedXp(learningEvents(languageCode))}

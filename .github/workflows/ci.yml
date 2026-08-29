@@ -28,7 +28,9 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npx playwright install --with-deps chromium webkit
-      - run: npm run e2e
+      # Keep hosted-runner browser contention predictable. The config also limits
+      # CI workers, but the explicit CLI value makes the Actions contract clear.
+      - run: npm run e2e -- --workers=2
       - name: Upload browser failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4

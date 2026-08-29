@@ -4,7 +4,7 @@ import{AccountUi}from'./auth-ui.js';
 import{HomeController}from'./home.js';
 import{PracticeController}from'./practice.js';
 import{CourseController}from'./course.js';
-import{JourneyController}from'./journey.js';
+import{JourneyController}from'./resumable-journey.js';
 import{HindiPronunciationController}from'./pronunciation-hi.js';
 
 const $=id=>document.getElementById(id);
@@ -43,7 +43,7 @@ async function boot(){
   const openJourney=code=>{
     const saved=getPosition(code);
     course.open(code,{tab:'journey'});
-    journey.open(code);
+    journey.open(code,{resume:true});
     if(saved.clientUpdatedAt)setPosition(code,saved.unitIndex,saved.itemIndex);
   };
   const openPractice=code=>{if(hasPractice())course.openPractice(code);else openJourney(code)};

@@ -3,7 +3,6 @@ import{mastery,learningEvents,targetReview}from'./learning.js';
 const targetOf=event=>event.targetId||event.target_id;
 const occurredAt=event=>event.clientCreatedAt||event.client_created_at||event.createdAt||event.created_at||'';
 const numericScore=event=>event?.score==null?null:Number.isFinite(Number(event.score))?Number(event.score):null;
-const lowerFirst=value=>value?value[0].toLowerCase()+value.slice(1):value;
 
 export function sessionMixFromEvents(events=[]){
   const scored=events.filter(event=>event.activity==='practice'&&numericScore(event)!=null).sort((a,b)=>occurredAt(a).localeCompare(occurredAt(b))).slice(-12);
@@ -12,29 +11,6 @@ export function sessionMixFromEvents(events=[]){
   if(accuracy<60)return{review:4,newItems:1,size:5,label:'Rebuild confidence',accuracy};
   if(accuracy<80)return{review:3,newItems:2,size:5,label:'Review + grow',accuracy};
   return{review:2,newItems:3,size:5,label:'Ready to stretch',accuracy};
-}
-
-function missionType(unit){
-  const text=`${unit?.title||''} ${unit?.goal||''}`.toLowerCase();
-  return/(hiragana|katakana|hangul|character|vowel|sound|script|letter|devanagari|alphabet|tone)/.test(text)?'foundation':'communication';
-}
-function canDoText(unit){
-  let raw=String(unit?.canDo||unit?.goal||unit?.title||'Use this language in a useful situation').trim().replace(/[.!]+$/,'');
-  if(/^i can\b/i.test(raw))return `${raw}.`;
-  if(/^learn\s+/i.test(raw))raw=`work with ${raw.replace(/^learn\s+/i,'')}`;
-  else if(/^practice\s+/i.test(raw))raw=`produce ${raw.replace(/^practice\s+/i,'')}`;
-  else if(/^master\s+/i.test(raw))raw=`use ${raw.replace(/^master\s+/i,'')}`;
-  else if(/^meet\s+/i.test(raw))raw=`recognize ${raw.replace(/^meet\s+/i,'')}`;
-  else raw=lowerFirst(raw);
-  return`I can ${raw}.`;
-}
-
-export function languageScaffold(course){
-  if(course.id==='ja')return{label:'Japanese pathway',hint:'Sound first. Kana stays visible while romanization gradually fades as recognition improves.'};
-  if(course.id==='zh')return{label:'Mandarin pathway',hint:'Listen carefully to the sound and tone. Pinyin supports early learning, then characters take more of the load.'};
-  if(course.id==='ko')return{label:'Korean pathway',hint:'Use useful phrases early while Hangul recognition becomes more automatic.'};
-  if(course.rtl)return{label:'Script + communication',hint:'Build useful spoken chunks while gradually becoming comfortable reading the script right-to-left.'};
-  return{label:'Communication first',hint:'Move quickly from useful phrases into listening, recall and short real-life responses.'};
 }
 
 function itemSeen(events,id){return events.some(event=>targetOf(event)===id)}
@@ -66,24 +42,7 @@ export function buildJourneySession(course,unitIndex){
   if(!reviews.length&&!fresh.length&&current?.items?.length)fresh=[ref(unitIndex,0,current.items[0],'new')];
 
   const queue=[];while(reviews.length||fresh.length){if(reviews.length)queue.push(reviews.shift());if(fresh.length)queue.push(fresh.shift())}
-  return{
-    queue,
-    canDo:canDoText(current),
-    missionType:missionType(current),
-    scaffold:languageScaffold(course),
-    mix:{...mix,reviewCount:queue.filter(entry=>entry.kind==='review').length,newCount:queue.filter(entry=>entry.kind==='new').length}
-  };
-}
-
-export function mistakeChoices(languageCode,targetId,kind='meaning'){
-  const counts=new Map();
-  for(const event of learningEvents(languageCode)){
-    if(targetOf(event)!==targetId)continue;
-    const metadata=event.metadata||{};if(metadata.questionKind!==kind)continue;
-    const selected=String(metadata.selectedAnswer||'').trim(),correct=String(metadata.correctAnswer||'').trim();
-    if(!selected||selected===correct)continue;counts.set(selected,(counts.get(selected)||0)+1);
-  }
-  return[...counts.entries()].sort((a,b)=>b[1]-a[1]).map(([answer])=>answer);
+  return{queue,mix:{...mix,reviewCount:queue.filter(entry=>entry.kind==='review').length,newCount:queue.filter(entry=>entry.kind==='new').length}};
 }
 
 export function shouldShowRoman(course,targetId){

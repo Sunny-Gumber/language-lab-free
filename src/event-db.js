@@ -59,31 +59,3 @@ export async function putEvents(scope,events){
   for(const event of list)store.put({key:`${scope}:${event.id}`,scope,event});
   await transactionDone(transaction);
 }
-
-export async function deleteEvents(scope,{languageCode=null}={}){
-  const db=await openDb();
-  if(!db)return;
-  const transaction=db.transaction(EVENT_STORE,'readwrite');
-  const index=transaction.objectStore(EVENT_STORE).index('scope');
-  await new Promise((resolve,reject)=>{
-    const request=index.openCursor(IDBKeyRange.only(scope));
-    request.onerror=()=>reject(request.error||new Error('IndexedDB cursor failed.'));
-    request.onsuccess=()=>{
-      const cursor=request.result;
-      if(!cursor){resolve();return}
-      const event=cursor.value?.event;
-      const code=event?.languageCode||event?.language_code;
-      if(!languageCode||code===languageCode)cursor.delete();
-      cursor.continue();
-    };
-  });
-  await transactionDone(transaction);
-}
-
-export async function countEvents(scope){
-  const db=await openDb();
-  if(!db)return 0;
-  const transaction=db.transaction(EVENT_STORE,'readonly');
-  const index=transaction.objectStore(EVENT_STORE).index('scope');
-  return Number(await requestResult(index.count(scope)))||0;
-}

@@ -1,4 +1,4 @@
-import{initializeStore,getPosition,getState,setPosition,subscribe}from'./store.js';
+import{initializeStore,getState,subscribe}from'./store.js';
 import{initializeCloud,subscribeAuth,subscribeStatus,getUser,isSignedIn,syncNow}from'./cloud.js';
 import{AccountUi}from'./auth-ui.js';
 import{HomeController}from'./home.js';
@@ -40,12 +40,7 @@ async function boot(){
   new HindiPronunciationController(course,practice);
   const account=new AccountUi();
   const hasPractice=()=>getState().events.some(event=>event?.activity==='practice');
-  const openJourney=code=>{
-    const saved=getPosition(code);
-    course.open(code,{tab:'journey'});
-    journey.open(code,{resume:true});
-    if(saved.clientUpdatedAt)setPosition(code,saved.unitIndex,saved.itemIndex);
-  };
+  const openJourney=code=>{course.open(code,{tab:'journey'});journey.open(code,{resume:true})};
   const openPractice=code=>{if(hasPractice())course.openPractice(code);else openJourney(code)};
   const home=new HomeController({openCourse:openJourney,openPractice});
 
@@ -61,9 +56,6 @@ async function boot(){
 
   home.render();account.renderAccountButton();
   await initializeCloud();
-  account.checkOnboarding();
-  await account.offerGuestImport();
-  home.render();
 
   if(isSignedIn()&&getState().prefs.dirty)syncNow('boot').catch(()=>{});
   registerServiceWorker();

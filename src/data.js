@@ -1,9 +1,25 @@
-import{unique}from'./utils.js';
+import{registerSpeechForms,unique}from'./utils.js';
 
 const rawCourses=globalThis.LANGUAGE_LAB_COURSES;
 if(!Array.isArray(rawCourses)||!rawCourses.length)throw new Error('Course data did not load.');
 
 const safeKey=value=>String(value??'').trim().replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
+const list=value=>Array.isArray(value)?value:value?[value]:[];
+
+/*
+ * Speech authoring contract:
+ * - native: primary learner-facing form (for Japanese this can stay kana-first)
+ * - kanjiForm: optional alternate written form for the same spoken target
+ * - speechForms / speechAliases: optional additional browser-recognition forms
+ *
+ * All authored forms are registered as equivalent for transcript matching. This
+ * lets future content add Kanji/Kana variants without editing the speech engine.
+ */
+function speechFormsFor(language,record,primary=''){
+  const forms=unique([primary,record?.native,record?.kanjiForm,...list(record?.speechForms),...list(record?.speechAliases)].map(value=>String(value??'').trim()).filter(Boolean));
+  registerSpeechForms(forms,language.locale||language.id);
+  return forms;
+}
 
 /*
  * Stamp the positional fallback identity BEFORE any pedagogical reordering.
@@ -66,11 +82,14 @@ export const courses=rawCourses.map(language=>{
     unit.stageId=rawStageForUnit(language,unit,unitIndex);
     unit.items=(unit.items||[]).map((item,itemIndex)=>{
       item.id=structuralItemId(language,unit,item,unitIndex,itemIndex);
-      item.index=itemIndex;item.unitIndex=unitIndex;item.stageId=unit.stageId;return item;
+      item.index=itemIndex;item.unitIndex=unitIndex;item.stageId=unit.stageId;
+      item.speechForms=speechFormsFor(language,item,item.native);
+      if(item.example)item.example.speechForms=speechFormsFor(language,item.example,item.example.native);
+      return item;
     });
     return unit;
   });
-  language.vocab=(language.vocab||[]).map((word,index)=>{word.id=structuralVocabId(language,word,index);word.index=index;return word});
+  language.vocab=(language.vocab||[]).map((word,index)=>{word.id=structuralVocabId(language,word,index);word.index=index;word.speechForms=speechFormsFor(language,word,word.native);return word});
   return language;
 });
 
@@ -101,14 +120,14 @@ function inferVocabStage(course,word){
 }
 for(const course of courses)for(const word of course.vocab)word.stageId=inferVocabStage(course,word);
 
-function exampleTarget(item){if(!item.example?.native||!item.example?.meaning)return null;return{id:item.id,native:item.example.native,roman:item.example.roman||item.roman||'',meaning:item.example.meaning,source:'item',stageId:item.stageId,item}}
-function vocabTarget(word){return{id:word.id,native:word.native,roman:word.roman||'',meaning:word.meaning,source:'vocab',stageId:word.stageId,word}}
+function exampleTarget(item){if(!item.example?.native||!item.example?.meaning)return null;return{id:item.id,native:item.example.native,kanjiForm:item.example.kanjiForm||'',speechForms:item.example.speechForms||[item.example.native],roman:item.example.roman||item.roman||'',meaning:item.example.meaning,source:'item',stageId:item.stageId,item}}
+function vocabTarget(word){return{id:word.id,native:word.native,kanjiForm:word.kanjiForm||'',speechForms:word.speechForms||[word.native],roman:word.roman||'',meaning:word.meaning,source:'vocab',stageId:word.stageId,word}}
 export function practiceTargets(course,skill,stageId=null){
   const units=stageId?unitsForStage(course,stageId):course.units;
   const itemTargets=units.flatMap(unit=>unit.items.map(exampleTarget).filter(Boolean));
   const vocabTargets=course.vocab.filter(word=>!stageId||word.stageId===stageId).map(vocabTarget);
   let raw;
-  if(skill==='writing')raw=units.flatMap(unit=>unit.items.map(item=>({id:item.id,native:item.native,roman:item.roman||'',meaning:item.example?.meaning||item.guide||'',source:'item',stageId:item.stageId,item})));
+  if(skill==='writing')raw=units.flatMap(unit=>unit.items.map(item=>({id:item.id,native:item.native,kanjiForm:item.kanjiForm||'',speechForms:item.speechForms||[item.native],roman:item.roman||'',meaning:item.example?.meaning||item.guide||'',source:'item',stageId:item.stageId,item})));
   else if(skill==='recall')raw=vocabTargets;
   else raw=[...itemTargets,...vocabTargets];
   const seen=new Set();
@@ -144,6 +163,9 @@ export const conversations={
 export function conversationItems(course,stageId=null){
   const list=conversations[course.id]||[];if(!list.length)return[];
   const firstStage=availableStages(course)[0]?.id;
-  return list.filter(item=>item.stageId?(!stageId||item.stageId===stageId):(!stageId||stageId===firstStage));
+  return list.filter(item=>item.stageId?(!stageId||item.stageId===stageId):(!stageId||stageId===firstStage)).map(item=>{
+    const speechForms=speechFormsFor(course,{native:item.answer,kanjiForm:item.kanjiForm,speechForms:item.speechForms,speechAliases:item.speechAliases},item.answer);
+    return{...item,speechForms};
+  });
 }
 export function hasConversation(course,stageId=null){return conversationItems(course,stageId).length>0}

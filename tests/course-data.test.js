@@ -4,6 +4,7 @@ import fs from'node:fs';
 import path from'node:path';
 import vm from'node:vm';
 import{fileURLToPath,pathToFileURL}from'node:url';
+import{similarity}from'../src/utils.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=name=>fs.readFileSync(path.join(root,name),'utf8');
@@ -17,6 +18,8 @@ async function normalizedCourses(){
   const soundUnit=japanese?.units?.find(unit=>unit.title==='Japanese Sound System');
   const dogItem=soundUnit?.items?.find(item=>item.example?.native==='いぬ');
   if(dogItem?.example)dogItem.example.kanjiForm='犬';
+  const homeWord=japanese?.vocab?.find(word=>word.native==='いえ');
+  if(homeWord)homeWord.kanjiForm='家';
   try{
     const url=new URL('../src/data.js',import.meta.url);url.searchParams.set('test',String(Date.now()));
     return(await import(url.href)).courses;
@@ -41,4 +44,7 @@ test('course content normalizes with unique stable target IDs after pedagogical 
   assert.match(japanese.units[0].items[0].id,/^item:ja:u1:i1$/);
   const dog=japanese.units.find(unit=>unit.title==='Japanese Sound System').items.find(item=>item.example?.native==='いぬ');
   assert.deepEqual(dog.example.speechForms,['いぬ','犬']);
+  const home=japanese.vocab.find(word=>word.native==='いえ');
+  assert.deepEqual(home.speechForms,['いえ','家']);
+  assert.equal(similarity('家','いえ'),1);
 });

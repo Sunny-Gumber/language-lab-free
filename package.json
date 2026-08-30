@@ -1,7 +1,7 @@
 {
   "name": "language-lab-free",
   "private": true,
-  "version": "14.0.0",
+  "version": "14.0.1",
   "type": "module",
   "description": "Guided adaptive language-learning platform with connected input, retrieval, free response, deepening Japanese/Mandarin paths and eight foundation courses",
   "scripts": {

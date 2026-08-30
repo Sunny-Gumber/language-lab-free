@@ -5,7 +5,7 @@ if(!Array.isArray(rawCourses)||!rawCourses.length)throw new Error('Course data d
 
 const safeKey=value=>String(value??'').trim().replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
 const list=value=>Array.isArray(value)?value:value?[value]:[];
-const STAGE_CACHE=new WeakMap(),ITEM_LOOKUP=new WeakMap(),PRACTICE_CACHE=new WeakMap(),TARGET_IDS_CACHE=new WeakMap(),CONVERSATION_CACHE=new WeakMap();
+const STAGE_CACHE=new WeakMap(),ITEM_LOOKUP=new WeakMap(),PRACTICE_CACHE=new WeakMap(),CONVERSATION_CACHE=new WeakMap();
 
 /*
  * Speech authoring contract:
@@ -111,7 +111,7 @@ export function availableStages(course){
   STAGE_CACHE.set(course,stages);return stages;
 }
 export function stageForUnit(course,unitIndex){const stages=availableStages(course);return stages.find(stage=>unitIndex>=stage.startUnit&&unitIndex<=stage.endUnit)||stages[0]}
-export function unitsForStage(course,stageId){const stage=availableStages(course).find(candidate=>candidate.id===stageId);return stage?course.units.slice(stage.startUnit,stage.endUnit+1):course.units}
+function unitsForStage(course,stageId){const stage=availableStages(course).find(candidate=>candidate.id===stageId);return stage?course.units.slice(stage.startUnit,stage.endUnit+1):course.units}
 
 function inferVocabStage(course,word){
   const stages=availableStages(course),declared=word.stageId||word.stage;
@@ -142,10 +142,6 @@ export function practiceTargets(course,skill,stageId=null){
   const seen=new Set(),targets=raw.filter(target=>{const key=`${target.id}|${target.native}|${target.meaning}`;if(!target.native||seen.has(key))return false;seen.add(key);return true});
   cache.set(cacheKey,targets);return targets;
 }
-export function allTargetIds(course){
-  if(TARGET_IDS_CACHE.has(course))return TARGET_IDS_CACHE.get(course);
-  const ids=unique([...course.units.flatMap(unit=>unit.items.map(item=>item.id)),...course.vocab.map(word=>word.id)]);TARGET_IDS_CACHE.set(course,ids);return ids;
-}
 
 function validateCourseIds(){
   for(const course of courses){
@@ -158,7 +154,7 @@ function validateCourseIds(){
 }
 validateCourseIds();
 
-export const conversations={
+const conversations={
   ja:[
     {prompt:'こんにちは。おげんきですか。',meaning:'Hello. How are you?',answer:'はい、げんきです。',roman:'hai, genki desu',answerMeaning:'Yes, I am well.'},
     {prompt:'おなまえは なんですか。',meaning:'What is your name?',answer:'わたしは アレックスです。',roman:'watashi wa Arekkusu desu',answerMeaning:'I am Alex.'},

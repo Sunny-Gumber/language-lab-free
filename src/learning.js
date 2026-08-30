@@ -1,6 +1,6 @@
 import{availableStages,courses,getCourse,practiceTargets}from'./data.js';
 import{clamp,daysBetween,randomId,todayLocal}from'./utils.js';
-import{getState,recordEvent}from'./store.js';
+import{getEventRevision,getState,recordEvent}from'./store.js';
 
 export const SKILLS=[
   {id:'listening',icon:'👂',label:'Listening',weight:.40,assessed:true,hint:'Understand what you hear'},
@@ -18,28 +18,46 @@ const targetOf=event=>event.targetId||event.target_id;
 const xpOf=event=>Number(event.xpDelta??event.xp_delta??0);
 const studyDateOf=event=>event.studyDate||event.study_date||'';
 const scoreOf=event=>event?.score==null?null:Number.isFinite(Number(event.score))?Number(event.score):null;
+const activityKey=(languageCode,activity)=>`${languageCode}\u0000${activity}`;
+const attemptKey=(languageCode,targetId,skill)=>`${languageCode}\u0000${targetId}\u0000${skill||''}`;
+let cachedRevision=-1,cachedIndex=null;
 
-function resetCutoffs(){
-  const cutoffs=new Map();
-  for(const event of getState().events){
+function eventIndex(){
+  const revision=getEventRevision();
+  if(cachedIndex&&cachedRevision===revision)return cachedIndex;
+  const events=getState().events,cutoffs=new Map();
+  for(const event of events){
     if(event.activity!=='reset')continue;
     const code=languageOf(event),time=occurredAt(event);
     if(code&&time>(cutoffs.get(code)||''))cutoffs.set(code,time);
   }
-  return cutoffs;
+  const byActivity=new Map(),practiceByTargetSkill=new Map(),scoredByTargetSkill=new Map(),allPractice=[];
+  for(const event of events){
+    const code=languageOf(event);if(!code||event.activity==='reset'||occurredAt(event)<=(cutoffs.get(code)||''))continue;
+    const key=activityKey(code,event.activity),activityEvents=byActivity.get(key)||[];activityEvents.push(event);byActivity.set(key,activityEvents);
+    if(event.activity!=='practice')continue;
+    allPractice.push(event);
+    const historyKey=attemptKey(code,targetOf(event),event.skill),history=practiceByTargetSkill.get(historyKey)||[];history.push(event);practiceByTargetSkill.set(historyKey,history);
+    if(scoreOf(event)!=null){const scored=scoredByTargetSkill.get(historyKey)||[];scored.push(event);scoredByTargetSkill.set(historyKey,scored)}
+  }
+  const byTime=(a,b)=>occurredAt(a).localeCompare(occurredAt(b));
+  allPractice.sort(byTime);
+  for(const list of byActivity.values())list.sort(byTime);
+  for(const list of practiceByTargetSkill.values())list.sort(byTime);
+  for(const list of scoredByTargetSkill.values())list.sort(byTime);
+  cachedRevision=revision;
+  cachedIndex={cutoffs,byActivity,practiceByTargetSkill,scoredByTargetSkill,allPractice,mastery:new Map()};
+  return cachedIndex;
 }
 function eventsAfterReset(languageCode,activity=null){
-  const cutoff=resetCutoffs().get(languageCode)||'';
-  return getState().events.filter(event=>languageOf(event)===languageCode&&occurredAt(event)>cutoff&&(!activity||event.activity===activity));
+  const index=eventIndex();
+  if(activity)return index.byActivity.get(activityKey(languageCode,activity))||[];
+  return getState().events.filter(event=>languageOf(event)===languageCode&&event.activity!=='reset'&&occurredAt(event)>(index.cutoffs.get(languageCode)||''));
 }
-export function learningEvents(languageCode=null){
-  if(languageCode)return eventsAfterReset(languageCode,'practice');
-  const cutoffs=resetCutoffs();
-  return getState().events.filter(event=>event.activity==='practice'&&occurredAt(event)>(cutoffs.get(languageOf(event))||''));
-}
-function practiceAttempts(languageCode,targetId,skill){return learningEvents(languageCode).filter(event=>targetOf(event)===targetId&&event.skill===skill)}
-function scoredAttempts(languageCode,targetId,skill){return practiceAttempts(languageCode,targetId,skill).filter(event=>scoreOf(event)!=null).sort((a,b)=>occurredAt(a).localeCompare(occurredAt(b)))}
-function previousBestToday(languageCode,targetId,skill,date){return scoredAttempts(languageCode,targetId,skill).filter(event=>studyDateOf(event)===date).reduce((best,event)=>Math.max(best,scoreOf(event)||0),0)}
+export function learningEvents(languageCode=null){return languageCode?eventsAfterReset(languageCode,'practice'):eventIndex().allPractice}
+function practiceAttempts(languageCode,targetId,skill){return eventIndex().practiceByTargetSkill.get(attemptKey(languageCode,targetId,skill))||[]}
+function scoredAttempts(languageCode,targetId,skill){return eventIndex().scoredByTargetSkill.get(attemptKey(languageCode,targetId,skill))||[]}
+function previousBestToday(languageCode,targetId,skill,date){return scoredAttempts(languageCode,targetId,skill).reduce((best,event)=>studyDateOf(event)===date?Math.max(best,scoreOf(event)||0):best,0)}
 function practicedToday(languageCode,targetId,skill,date){return practiceAttempts(languageCode,targetId,skill).some(event=>studyDateOf(event)===date)}
 
 export function recordPractice({languageCode,targetId,skill,score,xp=0,activity='practice',metadata={}}){
@@ -54,8 +72,11 @@ export function recordPractice({languageCode,targetId,skill,score,xp=0,activity=
 }
 export function attempts(languageCode,targetId,skill){return scoredAttempts(languageCode,targetId,skill)}
 export function mastery(languageCode,targetId,skill){
-  const recent=scoredAttempts(languageCode,targetId,skill).slice(-5);if(!recent.length)return 0;
-  let weighted=0,totalWeight=0;recent.forEach((event,index)=>{const weight=index+1;weighted+=(scoreOf(event)||0)*weight;totalWeight+=weight});return Math.round(weighted/totalWeight);
+  const index=eventIndex(),key=attemptKey(languageCode,targetId,skill);
+  if(index.mastery.has(key))return index.mastery.get(key);
+  const recent=scoredAttempts(languageCode,targetId,skill).slice(-5);if(!recent.length){index.mastery.set(key,0);return 0}
+  let weighted=0,totalWeight=0;recent.forEach((event,position)=>{const weight=position+1;weighted+=(scoreOf(event)||0)*weight;totalWeight+=weight});
+  const value=Math.round(weighted/totalWeight);index.mastery.set(key,value);return value;
 }
 export function skillStats(languageCode,skill,stageId=null){
   const definition=SKILL_MAP.get(skill)||{assessed:true};
@@ -92,9 +113,9 @@ export function startedLanguages(){return new Set(learningEvents().map(languageO
 
 export function reviewIntervalDays(score,attemptCount=1){if(score<70)return 1;if(score<85)return Math.min(5,2+Math.floor(attemptCount/2));if(score<95)return Math.min(12,5+attemptCount);return Math.min(30,10+attemptCount*2)}
 export function targetReview(languageCode,targetId,skill){
-  const definition=SKILL_MAP.get(skill)||{assessed:true},history=practiceAttempts(languageCode,targetId,skill).sort((a,b)=>occurredAt(a).localeCompare(occurredAt(b)));
+  const definition=SKILL_MAP.get(skill)||{assessed:true},history=practiceAttempts(languageCode,targetId,skill);
   if(!history.length)return{due:false,score:0,lastDate:null,interval:0};
-  const lastDate=studyDateOf(history[history.length-1]);
+  const lastDate=studyDateOf(history.at(-1));
   if(definition.assessed===false){const interval=Math.min(10,3+Math.floor(history.length/3));return{due:daysBetween(lastDate,todayLocal())>=interval,score:null,lastDate,interval}}
   const score=mastery(languageCode,targetId,skill),interval=reviewIntervalDays(score,history.length);return{due:daysBetween(lastDate,todayLocal())>=interval,score,lastDate,interval};
 }
@@ -105,6 +126,6 @@ export function weakestSkill(languageCode){return SKILLS.filter(skill=>skill.ass
 export function dailyMission(languageCode){const occurrence={},order=['listening','speaking','listening','recall'];return order.map((skill,index)=>{const rank=occurrence[skill]||0;occurrence[skill]=rank+1;const ranked=rankedTargets(languageCode,skill);return{id:`daily-${index}-${skill}`,skill,occurrence:rank+1,target:ranked[rank]||ranked[0]||null}}).filter(task=>task.target)}
 export function dailyMissionProgress(languageCode,date=todayLocal()){const events=learningEvents(languageCode).filter(event=>studyDateOf(event)===date);return Object.fromEntries(SKILLS.map(skill=>[skill.id,events.filter(event=>event.skill===skill.id).length]))}
 
-export function favoriteIds(languageCode){const latest=new Map();for(const event of eventsAfterReset(languageCode,'favorite').sort((a,b)=>occurredAt(a).localeCompare(occurredAt(b))))latest.set(targetOf(event),Number(event.score)>0);return new Set([...latest].filter(([,enabled])=>enabled).map(([id])=>id))}
+export function favoriteIds(languageCode){const latest=new Map();for(const event of eventsAfterReset(languageCode,'favorite'))latest.set(targetOf(event),Number(event.score)>0);return new Set([...latest].filter(([,enabled])=>enabled).map(([id])=>id))}
 export function setFavorite(languageCode,targetId,enabled){return recordPractice({languageCode,targetId,skill:null,score:enabled?100:0,xp:0,activity:'favorite',metadata:{enabled:Boolean(enabled)}})}
 export{resetLearning}from'./store.js';

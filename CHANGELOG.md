@@ -9,6 +9,8 @@ This changelog was initialized from the repository's existing release commits an
 ### Fixes
 
 - Japanese browser speech matching now treats common Kanji, Hiragana and Katakana renderings of the same spoken target as equivalent, preventing false 0% results such as browser-heard `犬` versus lesson target `いぬ`.
+- Added a data-driven speech-form contract: authored `kanjiForm`, `speechForms`, and `speechAliases` values are normalized and registered as accepted transcript equivalents, so future Japanese content can add valid written variants without changing the speech engine for each new word.
+- Practice targets now carry normalized speech-form metadata for future speaking-mode use.
 - The change remains transcript matching only; it does not claim phoneme-level accent or pronunciation grading.
 
 ### Documentation

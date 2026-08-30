@@ -1,6 +1,6 @@
 import test from'node:test';
 import assert from'node:assert/strict';
-import{clamp,daysBetween,deepEqual,escapeHtml,hashString,normalizeText,similarity,todayLocal,unique}from'../src/utils.js';
+import{clamp,daysBetween,deepEqual,escapeHtml,hashString,normalizeText,registerSpeechForms,similarity,todayLocal,unique}from'../src/utils.js';
 
 test('todayLocal uses calendar fields without UTC conversion',()=>{
   assert.equal(todayLocal(new Date(2026,7,28,0,5,0)),'2026-08-28');
@@ -29,6 +29,15 @@ test('Japanese speech transcript matching accepts equivalent writing systems',()
   assert.equal(similarity('猫','ねこ'),1);
   assert.equal(similarity('水','みず'),1);
   assert.ok(similarity('犬','ねこ')<.5);
+});
+
+test('authored speech forms register future Kanji and alternate readings without engine edits',()=>{
+  registerSpeechForms(['でんさんき','電算機'],'ja-JP');
+  assert.equal(similarity('電算機','でんさんき'),1);
+  registerSpeechForms(['せい','生'],'ja-JP');
+  registerSpeechForms(['なま','生'],'ja-JP');
+  assert.equal(similarity('生','せい'),1);
+  assert.equal(similarity('生','なま'),1);
 });
 
 test('escapeHtml protects generated content',()=>{

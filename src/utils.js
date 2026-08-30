@@ -10,6 +10,10 @@ const JAPANESE_RECOGNITION_EQUIVALENTS=[
   ['私','わたし'],['誰','だれ'],['客','きゃく'],['九','きゅう'],['今日','きょう']
 ];
 const JAPANESE_SCRIPT=/[\u3040-\u30ff]/;
+const REGISTERED_SPEECH_EQUIVALENTS=new Set();
+
+const speechPairKey=(left,right)=>left<=right?`${left}\u0000${right}`:`${right}\u0000${left}`;
+const registeredSpeechEquivalent=(left,right)=>REGISTERED_SPEECH_EQUIVALENTS.has(speechPairKey(left,right));
 
 function canonicalJapanese(value){
   let text=String(value??'');
@@ -76,14 +80,32 @@ export function normalizeText(value){
     .replace(/[.,!?。、！？'’\-؟？：:，؛]/g,'');
 }
 
+export function normalizeSpeechText(value,locale=''){
+  let text=normalizeText(value);
+  if(String(locale||'').toLowerCase().startsWith('ja')||JAPANESE_SCRIPT.test(text))text=canonicalJapanese(text);
+  return text;
+}
+
+export function registerSpeechForms(forms,locale=''){
+  const authored=[...new Set([...(forms||[])].map(value=>String(value??'').trim()).filter(Boolean))];
+  const raw=[...new Set(authored.map(normalizeText).filter(Boolean))];
+  const normalized=[...new Set(authored.map(value=>normalizeSpeechText(value,locale)).filter(Boolean))];
+  const register=list=>{
+    for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++)REGISTERED_SPEECH_EQUIVALENTS.add(speechPairKey(list[i],list[j]));
+  };
+  register(raw);register(normalized);
+  return authored;
+}
+
 export function similarity(left,right){
   let a=normalizeText(left);
   let b=normalizeText(right);
+  if(a===b||registeredSpeechEquivalent(a,b))return 1;
   if(JAPANESE_SCRIPT.test(a)||JAPANESE_SCRIPT.test(b)){
     a=canonicalJapanese(a);
     b=canonicalJapanese(b);
+    if(a===b||registeredSpeechEquivalent(a,b))return 1;
   }
-  if(a===b)return 1;
   if(!a.length||!b.length)return 0;
 
   const [short,long]=a.length<=b.length?[a,b]:[b,a];
@@ -106,14 +128,10 @@ export function similarity(left,right){
   return clamp(1-distance/Math.max(a.length,b.length),0,1);
 }
 
-export function normalizeSpeechText(value,locale=''){
-  let text=normalizeText(value);
-  if(String(locale||'').toLowerCase().startsWith('ja')||JAPANESE_SCRIPT.test(text))text=canonicalJapanese(text);
-  return text;
-}
-
 export function speechSimilarity(left,right,locale=''){
-  return similarity(normalizeSpeechText(left,locale),normalizeSpeechText(right,locale));
+  const a=normalizeSpeechText(left,locale),b=normalizeSpeechText(right,locale);
+  if(a===b||registeredSpeechEquivalent(a,b))return 1;
+  return similarity(a,b);
 }
 
 export function bestSpeechMatch(transcripts,forms,locale=''){

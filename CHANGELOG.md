@@ -2,24 +2,52 @@
 
 All notable product and architecture changes should be recorded here.
 
-This changelog was initialized from the repository's existing release commits and current documentation. It is not intended to reproduce every historical commit.
+## 14.0.0 — 2026-08-30
 
-## Unreleased
+### Integrated learning-flow rewrite
 
-### Fixes
+- Replaced the V13 seven-screen item loop as the normal Journey with a V14 integrated unit experience.
+- Added `src/learning-flow.js` as the pedagogical planning seam between course content, adaptive target selection and the Journey renderer.
+- Added `src/journey-v14.js` and `journey-v14.css` as the active guided learning experience.
+- V14 sessions can combine Mission → model dialogue → target learning → active retrieval → connected reading → free-response production → stage checkpoint → completion.
+- Existing adaptive review/new selection remains in use, but selected targets are now embedded in connected activities instead of presented only as isolated cards.
+- Wrong retrieval can schedule the target to return later in the same session.
+- All units are directly accessible during the current test phase so later Japanese/Mandarin stages can be evaluated without manufacturing progress history.
 
-- Japanese browser speech matching now treats common Kanji, Hiragana and Katakana renderings of the same spoken target as equivalent, preventing false 0% results such as browser-heard `犬` versus lesson target `いぬ`.
-- Added a data-driven speech-form contract: authored `kanjiForm`, `speechForms`, and `speechAliases` values are normalized and registered as accepted transcript equivalents, so future Japanese content can add valid written variants without changing the speech engine for each new word.
-- Practice targets now carry normalized speech-form metadata for future speaking-mode use.
-- The change remains transcript matching only; it does not claim phoneme-level accent or pronunciation grading.
+### Conversation and production
 
-### Documentation
+- Added connected multi-turn model dialogue to the Journey when authored V9/V14 dialogue is available.
+- Added connected reading when authored unit reading exists.
+- Added open free-response scenarios based on unit production goals.
+- Free responses are deliberately **not** assigned a fake percentage against one sample answer; the browser may capture what it heard as unscored production evidence.
+- Fixed-target speech remains scoreable through transcript matching because the target has an explicit accepted-form set.
 
-- Added `AGENTS.md` for ChatGPT/Codex development rules and regression-sensitive contracts.
-- Added `PRD.md` for current product requirements.
-- Added `ARCHITECTURE.md` for runtime, data, sync, offline and deployment architecture.
-- Added `TASKS.md` for protected behavior and candidate follow-up work.
-- Added this release changelog.
+### Japanese and Mandarin scaffolding
+
+- Kept Romaji/Pinyin scaffolding fade behavior in the new Journey.
+- Kept Hindi/Devanagari pronunciation guidance visible independently for Japanese and Mandarin.
+- Practice and V14 fixed-target speech now use authored `kanjiForm`, `speechForms` and `speechAliases` through `bestSpeechMatch()`.
+- Preserved Japanese Kanji/Hiragana/Katakana equivalence for authored spoken targets.
+
+### Product positioning
+
+- Product wording is now explicitly: **“A guided adaptive language-learning platform with deepening Japanese and Mandarin paths and foundation courses for eight additional languages.”**
+- Japanese/Mandarin remain the reference courses for deeper curriculum development.
+- The other eight languages remain honestly labelled as foundation courses.
+- Internal `advanced` stage labels do not claim JLPT/HSK/certification equivalence.
+
+### Runtime and PWA
+
+- Application version moved to `14.0.0` / `window.LanguageLab.version = 14.0`.
+- PWA cache moved to `language-lab-free-v14-0` and now includes `journey-v14.css`, `src/journey-v14.js` and `src/learning-flow.js`.
+- Existing Guest/account/IndexedDB/Supabase infrastructure remains available around the rewritten learning experience.
+
+## Unreleased / V13.1 follow-up fixes
+
+- Japanese browser speech matching treats common Kanji, Hiragana and Katakana renderings of the same spoken target as equivalent, preventing false 0% results such as browser-heard `犬` versus lesson target `いぬ`.
+- Added a data-driven speech-form contract: authored `kanjiForm`, `speechForms`, and `speechAliases` values are normalized and registered as accepted transcript equivalents.
+- Practice targets carry normalized speech-form metadata.
+- Transcript matching remains text-recognition evidence only; it does not claim phoneme-level accent, pitch-accent or Mandarin tone grading.
 
 ## 13.1.0 — 2026-08-29
 
@@ -41,101 +69,49 @@ This changelog was initialized from the repository's existing release commits an
 
 ### Journey resume hardening
 
-- Persisted the exact guided Journey session rather than recalculating another recommended unit after leaving/reloading.
-- Added exact paused item/step restoration.
+- Persisted the exact V13 guided Journey session/item/step.
 - Added clearer labels for cross-unit review items.
 - Preserved resume support offline.
 
 ## 12.0.0 — 2026-08-29
 
-### Home experience redesign
-
-- Added separate home states for new visitors and returning learners.
-- New learners receive a landing-and-start experience instead of an empty dashboard.
-- Added an interactive listening demo, language selection, product explanation and no-account-required start path.
-- Returning learners receive a progress-oriented dashboard with continuation and practice information.
-- Added responsive home presentation and regression coverage.
+- Added separate new-visitor and returning-learner home states.
+- Added a listening demo, honest course-depth information and no-account-required start path.
+- Added a returning learner dashboard with Continue Learning, practice and progress information.
 
 ## 11.2.0 — 2026-08-29
 
-### Sync, identity, offline and mastery hardening
-
 - Moved learning-event persistence to IndexedDB.
-- Hardened account/Guest-scoped local state.
-- Implemented incremental learning-event synchronization.
-- Improved conflict-safe preference synchronization.
+- Hardened account/Guest-scoped local state and Guest-to-account import.
+- Implemented incremental learning-event synchronization and conflict-safe position/preference synchronization.
 - Added stable target IDs and stage-aware practice data.
-- Corrected mastery calculations and reduced duplicate XP behavior.
-- Corrected writing progress semantics and reset behavior.
-- Added stage-aware practice and conversation behavior.
-- Added Guest-to-account progress import.
-- Hardened exact course-position conflict handling.
 - Pinned and cached the Supabase browser runtime for offline startup.
 - Added service-worker/offline PWA regression testing.
 
 ## 11.0.0 — 2026-08-28
 
-### Clean architecture and event-based learning core
-
 - Replaced the historical layered runtime with a cleaner ES-module architecture.
 - Moved learning state toward an event-derived model.
-- Added exact course-position synchronization.
-- Strengthened mobile-first UI behavior.
-- Added V11 Supabase migrations and stronger CI checks.
-- Removed obsolete legacy progress schema after the event-based contract became active.
-- Added browser regression coverage across desktop, Android and iPhone flows.
+- Added course-position synchronization and stronger mobile/browser regression coverage.
 
 ## 10.0.0 — 2026-08-27
 
-### Architecture hardening
-
-- Hardened account-scoped storage and cloud reconciliation.
-- Improved service-worker isolation and PWA metadata.
-- Strengthened learning preferences and skill coverage handling.
-- Improved CI regression safety.
+- Hardened account-scoped storage, cloud reconciliation, PWA metadata and CI safety.
 
 ## 9.0.0 — 2026-08-27
 
-### Japanese and Mandarin lesson quality
-
-- Added deeper integrated Japanese and Mandarin lesson packs.
-- Added richer lesson/checkpoint UI.
-- Improved offline caching for integrated lesson assets.
+- Added deeper integrated Japanese and Mandarin lesson packs and richer lesson/checkpoint content.
 
 ## 8.0.0 — 2026-08-27
 
-### Multi-skill mastery and advanced paths
-
-- Added expanded Japanese and Mandarin multi-stage curricula.
-- Added a multi-skill mastery engine.
-- Added adaptive skill-practice layers and supporting offline assets.
+- Added expanded Japanese and Mandarin multi-stage curricula and multi-skill mastery support.
 
 ## 7.0.0 — 2026-08-27
 
-### Course-content expansion
-
-- Added higher-quality beginner course content.
-- Added and cached the V7 content layer for offline use.
+- Added higher-quality beginner course content and the V7 content layer.
 
 ## 6.0.0 — 2026-08-27
 
-### Adaptive daily learning experience
+- Added guided daily learning behavior, course-selection/dashboard improvements, local-calendar streak handling and offline caching.
 
-- Added guided daily learning behavior.
-- Improved daily mission/selected-language stability.
-- Added course-selection/dashboard refresh behavior.
-- Corrected local-calendar streak handling.
-- Improved Continue Learning position handling.
-- Preserved offline caching for the completed V6 experience.
-
-## Historical fixes leading into V6+
-
-Notable pre-V6/V6-era maintenance included:
-
-- reduced fallback cloud reconciliation frequency to hourly
-- account-scoped progress isolation fixes
-- first-login learning-preference onboarding
-- My Languages management and mobile layout hardening
-- communication-first listening/speaking and voice-selection behavior
-
-For detailed historical implementation commits, use the Git history and pull requests.
+For detailed historical implementation commits, use Git history and pull requests.

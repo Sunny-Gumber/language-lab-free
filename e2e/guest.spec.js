@@ -2,7 +2,7 @@ import{test,expect}from'@playwright/test';
 import{blockExternal}from'./helpers.js';
 
 async function waitForBoot(page){
-  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('14.0');
+  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('14.0.1');
   await expect(page.locator('.fatal-error')).toHaveCount(0);
 }
 async function openFirstRetrieve(page){

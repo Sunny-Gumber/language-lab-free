@@ -17,10 +17,11 @@ async function openFirstRetrieve(page){
   return native;
 }
 async function completeCurrentRetrieve(page,native){
-  const correct=page.locator('[data-retrieve-answer]').filter({hasText:native}).first();
-  if(await correct.count())await correct.click();else await page.locator('[data-retrieve-answer]').first().click();
-  await page.locator('[data-flow-action="manual-target"]').click();
-  await expect(page.locator('[data-flow-action="continue"]')).toBeVisible();
+  const retrieve=page.locator('.flow-card-v14.retrieve');
+  const correct=retrieve.locator('[data-retrieve-answer]').filter({hasText:native}).first();
+  if(await correct.count())await correct.click();else await retrieve.locator('[data-retrieve-answer]').first().click();
+  await retrieve.locator('[data-flow-action="manual-target"]').click();
+  await expect(retrieve.locator('[data-flow-action="continue"]')).toBeVisible();
 }
 
 test.beforeEach(async({page})=>{await blockExternal(page)});
@@ -57,19 +58,20 @@ test('integrated session moves from mission to dialogue, target learning, retrie
   const native=await openFirstRetrieve(page);
   await completeCurrentRetrieve(page,native);
   await expect.poll(()=>page.evaluate(()=>window.LanguageLab.getState().events.filter(event=>event.activity==='practice').length)).toBeGreaterThanOrEqual(2);
-  await expect(page.locator('.practice-feedback')).toContainText('Speaking practice recorded');
-  await page.locator('[data-flow-action="continue"]').click();
+  await expect(page.locator('.flow-card-v14.retrieve .practice-feedback')).toContainText('Speaking practice recorded');
+  await page.locator('.flow-card-v14.retrieve [data-flow-action="continue"]').click();
   await expect(page.locator('.guided-lesson-v14')).toBeVisible();
 });
 
 test('retrieval mistakes are not treated as completion and can return later',async({page},testInfo)=>{
   test.skip(testInfo.project.name!=='desktop-chromium','Retry behavior is exercised once on desktop Chromium.');
   await page.goto('/');await waitForBoot(page);await page.locator('[data-language="ja"]').click();
-  const native=await openFirstRetrieve(page),options=page.locator('[data-retrieve-answer]');let wrong=-1;
+  const native=await openFirstRetrieve(page),retrieve=page.locator('.flow-card-v14.retrieve'),options=retrieve.locator('[data-retrieve-answer]');let wrong=-1;
   for(let i=0;i<await options.count();i++){if((await options.nth(i).textContent())?.trim()!==native){wrong=i;break}}
   expect(wrong).toBeGreaterThanOrEqual(0);await options.nth(wrong).click();
-  await expect(page.locator('.practice-feedback')).toContainText('will return once more');
-  await page.locator('[data-flow-action="manual-target"]').click();await page.locator('[data-flow-action="continue"]').click();
+  await expect(retrieve.locator('.practice-feedback')).toContainText('will return once more');
+  await expect.poll(()=>page.evaluate(()=>window.LanguageLab.getState().events.some(event=>event.metadata?.mode==='v14-retrieval'&&event.metadata?.correct===false))).toBe(true);
+  await retrieve.locator('[data-flow-action="manual-target"]').click();await retrieve.locator('[data-flow-action="continue"]').click();
   await expect(page.locator('.guided-lesson-v14')).toBeVisible();
 });
 

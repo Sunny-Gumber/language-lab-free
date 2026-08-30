@@ -5,8 +5,11 @@ import{randomId,safeJson,todayLocal,unique}from'./utils.js';
 const VERSION=12;
 const PREFIX='llf:v12:';
 const PREF_KEYS=['primaryLanguage','enabledLanguages','audioPreference','dailyGoalXp','onboardingCompleted'];
-let scope='guest',state=null,channel=null;
+let scope='guest',state=null,channel=null,eventRevision=0;
 const listeners=new Set();
+
+function touchEvents(){eventRevision++}
+export function getEventRevision(){return eventRevision}
 
 function defaultState(nextScope='guest'){
   const guest=nextScope==='guest';
@@ -49,7 +52,9 @@ function normalize(input,nextScope=scope){
   sync.prefDirtyFields=unique((Array.isArray(sync.prefDirtyFields)?sync.prefDirtyFields:[]).filter(field=>PREF_KEYS.includes(field)));
   prefs.dirty=sync.prefDirtyFields.length>0;
 
-  return{version:VERSION,prefs,ui,sync,events:Array.isArray(value.events)?value.events.filter(event=>event&&event.id):[]};
+  const sourceEvents=Array.isArray(value.events)?value.events:[];
+  const events=sourceEvents.every(event=>event&&event.id)?sourceEvents:sourceEvents.filter(event=>event&&event.id);
+  return{version:VERSION,prefs,ui,sync,events};
 }
 function metaSnapshot(){return{...state,events:[]}}
 function saveMeta(){try{localStorage.setItem(key(),JSON.stringify(metaSnapshot()))}catch(error){console.warn('[Language Lab] local preferences could not be saved',error)}}
@@ -73,8 +78,7 @@ function ensureChannel(){
     const currentEvents=await loadEvents(scope);
     const next=normalize(safeJson(localStorage.getItem(key()),null),scope);
     next.events=currentEvents;
-    state=next;
-    notify('peer');
+    state=next;touchEvents();notify('peer');
   };
 }
 
@@ -83,15 +87,14 @@ export async function initializeStore(){
   const raw=safeJson(localStorage.getItem(key()),null);
   state=normalize(raw,scope);
   if(Array.isArray(raw?.events)&&raw.events.length){await putEvents(scope,raw.events)}
-  state.events=await loadEvents(scope);
+  state.events=await loadEvents(scope);touchEvents();
   if(!state.events.length&&state.sync.eventCursor)state.sync.eventCursor=null;
   saveMeta();
   window.addEventListener('storage',async event=>{
     if(event.key!==key())return;
     const next=normalize(safeJson(event.newValue,null),scope);
     next.events=await loadEvents(scope);
-    state=next;
-    notify('storage');
+    state=next;touchEvents();notify('storage');
   });
   return state;
 }
@@ -105,7 +108,7 @@ export async function setScope(nextScope){
   const raw=safeJson(localStorage.getItem(key()),null);
   state=normalize(raw,scope);
   if(Array.isArray(raw?.events)&&raw.events.length)await putEvents(scope,raw.events);
-  state.events=await loadEvents(scope);
+  state.events=await loadEvents(scope);touchEvents();
   if(!state.events.length&&state.sync.eventCursor)state.sync.eventCursor=null;
   saveMeta();notify('scope');broadcast('scope');
   return state;
@@ -173,7 +176,7 @@ export function applyRemotePositions(rows){
 
 export function recordEvent(event){
   const current=getState();if(!event?.id||current.events.some(existing=>existing.id===event.id))return false;
-  const next={...event,synced:Boolean(event.synced)};current.events.push(next);persistEvents([next]);emit('event');return true;
+  const next={...event,synced:Boolean(event.synced)};current.events.push(next);touchEvents();persistEvents([next]);emit('event');return true;
 }
 export function mergeEvents(events){
   const current=getState(),byId=new Map(current.events.map(event=>[event.id,event])),changedEvents=[];let changed=false;
@@ -187,7 +190,7 @@ export function mergeEvents(events){
     }
     const next={...event,synced:true};current.events.push(next);byId.set(next.id,next);changedEvents.push(next);changed=true;
   }
-  if(changed){current.events.sort((a,b)=>String(a.clientCreatedAt||a.client_created_at||'').localeCompare(String(b.clientCreatedAt||b.client_created_at||'')));persistEvents(changedEvents);emit('remote-events')}
+  if(changed){current.events.sort((a,b)=>String(a.clientCreatedAt||a.client_created_at||'').localeCompare(String(b.clientCreatedAt||b.client_created_at||'')));touchEvents();persistEvents(changedEvents);emit('remote-events')}
   return changed;
 }
 export function unsyncedEvents(){return getState().events.filter(event=>!event.synced)}
@@ -227,7 +230,7 @@ export async function importGuestLearning(userId){
   const guestEvents=await loadEvents('guest');
   const current=getState(),byId=new Set(current.events.map(event=>event.id)),added=[];
   for(const event of guestEvents){if(!event?.id||byId.has(event.id))continue;const next={...event,synced:false};delete next.createdAt;delete next.created_at;current.events.push(next);byId.add(next.id);added.push(next)}
-  if(added.length)persistEvents(added);
+  if(added.length){touchEvents();persistEvents(added)}
   const guestMeta=normalize(safeJson(localStorage.getItem(key('guest')),null),'guest');
   for(const[code,position]of Object.entries(guestMeta.ui.positions||{}))if(!current.ui.positions[code]){current.ui.positions[code]={...position,clientUpdatedAt:new Date().toISOString()};current.ui.positionDirty[code]=true}
   markGuestImportDecided(userId);emit('guest-import');return added.length;

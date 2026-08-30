@@ -146,15 +146,6 @@ export function bestSpeechMatch(transcripts,forms,locale=''){
   return best;
 }
 
-export function hashString(value){
-  let hash=2166136261;
-  for(const char of String(value??'')){
-    hash^=char.codePointAt(0);
-    hash=Math.imul(hash,16777619);
-  }
-  return (hash>>>0).toString(36);
-}
-
 export function unique(values){return [...new Set(values||[])]}
 
 export function debounce(fn,wait=250){
@@ -163,13 +154,4 @@ export function debounce(fn,wait=250){
     clearTimeout(timer);
     timer=setTimeout(()=>fn(...args),wait);
   };
-}
-
-export function deepEqual(a,b){
-  const stable=value=>{
-    if(Array.isArray(value))return value.map(stable);
-    if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])]));
-    return value;
-  };
-  return JSON.stringify(stable(a))===JSON.stringify(stable(b));
 }

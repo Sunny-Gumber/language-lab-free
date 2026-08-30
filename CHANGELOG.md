@@ -2,6 +2,32 @@
 
 All notable product and architecture changes should be recorded here.
 
+## 14.0.1 — 2026-08-30
+
+### Runtime reliability and load reduction
+
+- Audited the V14 runtime for dead, duplicated and repeatedly recomputed work.
+- Added event-revision invalidation in `src/store.js` and an indexed learning-event view in `src/learning.js`.
+- Learning evidence is now grouped once per revision by language/activity and language/target/skill instead of repeatedly filtering and sorting the complete event history for mastery, review and progress calculations.
+- Mastery values are cached for the current event revision.
+- Unrelated UI/preference state updates preserve the existing event array instead of copying it through every normalization pass.
+- Added immutable lookup caches in `src/data.js` for courses, stages, items, practice targets, target IDs and conversation items.
+- Removed V13-only adaptive-session helpers that no longer had a V14 caller.
+- Removed unused IndexedDB delete/count helpers.
+- Removed redundant Journey position restoration and duplicate post-cloud initialization renders.
+
+### Legacy cleanup
+
+- Removed obsolete `src/journey.js` and `src/resumable-journey.js` V13 implementations from the active tree.
+- Removed obsolete `journey-v13.css`.
+- Removed the unused V10 compatibility runtime `v10-hardening.js`.
+- Git history remains the source for historical implementations instead of keeping parallel runtime files in the current codebase.
+- Added explicit code-hygiene rules to `AGENTS.md` to prevent dead parallel implementations and repeated hot-path event scans from returning.
+
+### PWA
+
+- Bumped the offline cache to `language-lab-free-v14-0-1` so installed clients refresh the cleaned V14 runtime.
+
 ## 14.0.0 — 2026-08-30
 
 ### Integrated learning-flow rewrite

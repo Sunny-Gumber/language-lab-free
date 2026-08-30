@@ -2,7 +2,7 @@
 
 ## Current product version
 
-`14.0.0`
+`14.0.1`
 
 Language Lab Free is currently positioned as:
 
@@ -11,6 +11,20 @@ Language Lab Free is currently positioned as:
 V14 is a test-phase learning-model rewrite. Backward compatibility with earlier test progress is not a product blocker unless explicitly requested; security, account isolation and secret-handling rules still apply.
 
 ## Completed / established
+
+### V14.0.1 runtime cleanup
+
+- [x] Audited the active runtime and removed superseded V13 Journey/resume implementations, V13 Journey CSS and unused V10 compatibility code.
+- [x] Removed V13-only adaptive-session helpers with no V14 runtime/test caller.
+- [x] Removed unused IndexedDB delete/count helpers.
+- [x] Added event-revision invalidation so derived learning caches rebuild only when learning events change.
+- [x] Indexed practice events by language/target/skill instead of repeatedly filtering/sorting the complete event history.
+- [x] Cached mastery values within an event revision.
+- [x] Preserved the event array during unrelated UI/preference normalization instead of copying it repeatedly.
+- [x] Cached immutable course, stage, item, practice-target, target-ID and conversation lookups.
+- [x] Removed redundant Journey position restoration and duplicate post-cloud boot renders.
+- [x] Added code-hygiene rules to prevent historical parallel runtimes and repeated hot-path scans from returning.
+- [x] Refreshed the offline cache for the cleanup release.
 
 ### V14 learning model
 

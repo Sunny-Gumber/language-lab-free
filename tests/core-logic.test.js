@@ -1,6 +1,6 @@
 import test from'node:test';
 import assert from'node:assert/strict';
-import{clamp,daysBetween,deepEqual,escapeHtml,hashString,normalizeText,registerSpeechForms,similarity,todayLocal,unique}from'../src/utils.js';
+import{clamp,daysBetween,escapeHtml,normalizeText,registerSpeechForms,similarity,todayLocal,unique}from'../src/utils.js';
 
 test('todayLocal uses calendar fields without UTC conversion',()=>{
   assert.equal(todayLocal(new Date(2026,7,28,0,5,0)),'2026-08-28');
@@ -44,12 +44,6 @@ test('escapeHtml protects generated content',()=>{
   assert.equal(escapeHtml('<b>"x"</b>'),'&lt;b&gt;&quot;x&quot;&lt;/b&gt;');
 });
 
-test('hashString is stable and unique removes duplicates',()=>{
-  assert.equal(hashString('Language Lab'),hashString('Language Lab'));
+test('unique removes duplicate values',()=>{
   assert.deepEqual(unique(['ja','zh','ja']),['ja','zh']);
-});
-
-test('deepEqual ignores object key order but not values',()=>{
-  assert.equal(deepEqual({a:1,b:{x:2}},{b:{x:2},a:1}),true);
-  assert.equal(deepEqual({a:1},{a:2}),false);
 });

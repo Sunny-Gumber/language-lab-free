@@ -1,4 +1,4 @@
-import{availableStages,stageForUnit}from'./data.js';
+import{stageForUnit}from'./data.js';
 import{learningEvents}from'./learning.js';
 import{buildJourneySession}from'./session.js';
 import{unique}from'./utils.js';
@@ -96,8 +96,4 @@ export function buildIntegratedExperience(course,unitIndex){
 export function courseDepth(course){
   if(['ja','zh'].includes(course.id))return{label:'Deepening path',detail:'Structured from foundations into advanced-topic grammar, connected input and production.'};
   return{label:'Foundation course',detail:'Core practical foundations today; deeper staged content will follow the Japanese/Mandarin model.'};
-}
-
-export function stageSummary(course){
-  const stages=availableStages(course);return{count:stages.length,first:stages[0]?.label||'Foundation',last:stages.at(-1)?.label||'Foundation'};
 }

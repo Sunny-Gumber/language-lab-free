@@ -70,7 +70,7 @@ test('home is honest about Japanese/Mandarin depth and eight foundation courses'
 test('V14 uses connected input, retrieval, reading and free response as the normal Journey',()=>{
   assert.ok(exists('src/journey-v14.js'));assert.ok(exists('src/learning-flow.js'));assert.ok(exists('journey-v14.css'));
   const app=read('src/app.js'),journey=read('src/journey-v14.js'),flow=read('src/learning-flow.js');
-  assert.match(app,/from'\.\/journey-v14\.js'/);assert.match(app,/version:'14\.0'/);assert.match(app,/tab:'journey'/);
+  assert.match(app,/from'\.\/journey-v14\.js'/);assert.match(app,/version:'14\.0\.1'/);assert.match(app,/tab:'journey'/);
   for(const label of['Journey','Practice','Review','Explore','Progress'])assert.match(journey,new RegExp(label));
   for(const type of["type:'mission'","type:'dialogue'","type:'learn'","type:'retrieve'","type:'reading'","type:'scenario'","type:'complete'"])assert.match(flow,new RegExp(type.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
   assert.match(journey,/Free-response scenario/);assert.match(journey,/Respond in your own words/);assert.match(journey,/Connected reading/);assert.match(journey,/Model conversation/);
@@ -91,10 +91,16 @@ test('speech practice uses authored accepted forms instead of one surface string
   assert.match(utils,/registerSpeechForms/);assert.match(utils,/bestSpeechMatch/);
 });
 
-test('event history remains backed by IndexedDB',()=>{
+test('event history remains backed by IndexedDB and derived learning uses revision caches',()=>{
   assert.ok(exists('src/event-db.js'));
-  const store=read('src/store.js');
-  assert.match(store,/from'\.\/event-db\.js'/);assert.match(store,/events:\[\]/);assert.match(store,/eventCursor/);
+  const store=read('src/store.js'),learning=read('src/learning.js'),data=read('src/data.js');
+  assert.match(store,/from'\.\/event-db\.js'/);assert.match(store,/events:\[\]/);assert.match(store,/eventCursor/);assert.match(store,/getEventRevision/);
+  assert.match(learning,/function eventIndex\(/);assert.match(learning,/mastery:new Map\(\)/);
+  assert.match(data,/PRACTICE_CACHE/);assert.match(data,/ITEM_LOOKUP/);
+});
+
+test('superseded V13/V10 runtime files are removed instead of kept as parallel code',()=>{
+  for(const file of['src/journey.js','src/resumable-journey.js','journey-v13.css','v10-hardening.js'])assert.equal(exists(file),false,`Obsolete runtime should be removed: ${file}`);
 });
 
 test('service worker caches V14 flow assets, pinned Supabase runtime and bypasses API traffic',()=>{
@@ -103,7 +109,7 @@ test('service worker caches V14 flow assets, pinned Supabase runtime and bypasse
   const refs=[...match[1].matchAll(/['"]\.\/([^'"]*)['"]/g)].map(item=>item[1]).filter(Boolean);
   for(const ref of refs)assert.ok(exists(ref),`Missing cached asset: ${ref}`);
   for(const required of['home-v12.css','journey-v14.css','src/journey-v14.js','src/learning-flow.js','src/session.js'])assert.ok(refs.includes(required),`V14 cache missing ${required}`);
-  assert.match(sw,/language-lab-free-v14-0/);assert.match(sw,/url\.origin!==self\.location\.origin/);assert.match(sw,/SUPABASE_PINNED/);assert.match(sw,/@supabase\/supabase-js@2\.112\.3/);assert.match(sw,/self\.skipWaiting\(\)/);assert.match(sw,/self\.clients\.claim\(\)/);
+  assert.match(sw,/language-lab-free-v14-0-1/);assert.match(sw,/url\.origin!==self\.location\.origin/);assert.match(sw,/SUPABASE_PINNED/);assert.match(sw,/@supabase\/supabase-js@2\.112\.3/);assert.match(sw,/self\.skipWaiting\(\)/);assert.match(sw,/self\.clients\.claim\(\)/);
 });
 
 test('manifest icon files exist',()=>{

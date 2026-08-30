@@ -1,4 +1,4 @@
-const CACHE='language-lab-free-v14-0';
+const CACHE='language-lab-free-v14-0-1';
 const SUPABASE_PINNED='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.min.js';
 const ASSETS=[
   './','./index.html','./styles.css','./home-v12.css','./journey-v14.css','./app.js','./manifest.webmanifest','./icon.svg',

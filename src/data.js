@@ -5,6 +5,7 @@ if(!Array.isArray(rawCourses)||!rawCourses.length)throw new Error('Course data d
 
 const safeKey=value=>String(value??'').trim().replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
 const list=value=>Array.isArray(value)?value:value?[value]:[];
+const STAGE_CACHE=new WeakMap(),ITEM_LOOKUP=new WeakMap(),PRACTICE_CACHE=new WeakMap(),TARGET_IDS_CACHE=new WeakMap(),CONVERSATION_CACHE=new WeakMap();
 
 /*
  * Speech authoring contract:
@@ -94,21 +95,27 @@ export const courses=rawCourses.map(language=>{
 });
 
 export const courseCodes=courses.map(course=>course.id);
-export function getCourse(code){return courses.find(course=>course.id===code)||courses[0]}
+const COURSE_BY_CODE=new Map(courses.map(course=>[course.id,course]));
+export function getCourse(code){return COURSE_BY_CODE.get(code)||courses[0]}
 export function getUnit(course,index){return course.units[Math.max(0,Math.min(Number(index)||0,course.units.length-1))]}
 export function getItem(course,unitIndex,itemIndex){const unit=getUnit(course,unitIndex);return unit.items[Math.max(0,Math.min(Number(itemIndex)||0,unit.items.length-1))]}
-export function findItem(course,targetId){for(const unit of course.units){const item=unit.items.find(candidate=>candidate.id===targetId);if(item)return{unit,item,unitIndex:unit.index,itemIndex:item.index}}return null}
-export function availableStages(course){
-  const stages=(course.curriculum?.stages||[]).filter(stage=>stage.available!==false);
-  if(stages.length)return stages.map(stage=>({...stage,startUnit:Math.max(0,Number(stage.startUnit)||0),endUnit:Math.min(course.units.length-1,Number(stage.endUnit??course.units.length-1))}));
-  return[{id:'foundation',label:'Foundation',description:'Current course',startUnit:0,endUnit:course.units.length-1,available:true}];
+export function findItem(course,targetId){
+  let lookup=ITEM_LOOKUP.get(course);
+  if(!lookup){lookup=new Map();for(const unit of course.units)for(const item of unit.items)lookup.set(item.id,{unit,item,unitIndex:unit.index,itemIndex:item.index});ITEM_LOOKUP.set(course,lookup)}
+  return lookup.get(targetId)||null;
 }
-export function stageForUnit(course,unitIndex){return availableStages(course).find(stage=>unitIndex>=stage.startUnit&&unitIndex<=stage.endUnit)||availableStages(course)[0]}
+export function availableStages(course){
+  const cached=STAGE_CACHE.get(course);if(cached)return cached;
+  const raw=(course.curriculum?.stages||[]).filter(stage=>stage.available!==false);
+  const stages=raw.length?raw.map(stage=>({...stage,startUnit:Math.max(0,Number(stage.startUnit)||0),endUnit:Math.min(course.units.length-1,Number(stage.endUnit??course.units.length-1))})):[{id:'foundation',label:'Foundation',description:'Current course',startUnit:0,endUnit:course.units.length-1,available:true}];
+  STAGE_CACHE.set(course,stages);return stages;
+}
+export function stageForUnit(course,unitIndex){const stages=availableStages(course);return stages.find(stage=>unitIndex>=stage.startUnit&&unitIndex<=stage.endUnit)||stages[0]}
 export function unitsForStage(course,stageId){const stage=availableStages(course).find(candidate=>candidate.id===stageId);return stage?course.units.slice(stage.startUnit,stage.endUnit+1):course.units}
 
 function inferVocabStage(course,word){
-  const declared=word.stageId||word.stage;
-  if(declared&&availableStages(course).some(stage=>stage.id===declared))return declared;
+  const stages=availableStages(course),declared=word.stageId||word.stage;
+  if(declared&&stages.some(stage=>stage.id===declared))return declared;
   const native=String(word.native||'').trim();
   if(native){
     for(const unit of course.units){
@@ -116,13 +123,15 @@ function inferVocabStage(course,word){
       if(found)return unit.stageId||stageForUnit(course,unit.index)?.id;
     }
   }
-  return availableStages(course)[0]?.id||'foundation';
+  return stages[0]?.id||'foundation';
 }
 for(const course of courses)for(const word of course.vocab)word.stageId=inferVocabStage(course,word);
 
 function exampleTarget(item){if(!item.example?.native||!item.example?.meaning)return null;return{id:item.id,native:item.example.native,kanjiForm:item.example.kanjiForm||'',speechForms:item.example.speechForms||[item.example.native],roman:item.example.roman||item.roman||'',meaning:item.example.meaning,source:'item',stageId:item.stageId,item}}
 function vocabTarget(word){return{id:word.id,native:word.native,kanjiForm:word.kanjiForm||'',speechForms:word.speechForms||[word.native],roman:word.roman||'',meaning:word.meaning,source:'vocab',stageId:word.stageId,word}}
 export function practiceTargets(course,skill,stageId=null){
+  let cache=PRACTICE_CACHE.get(course);if(!cache){cache=new Map();PRACTICE_CACHE.set(course,cache)}
+  const cacheKey=`${skill}\u0000${stageId||''}`;if(cache.has(cacheKey))return cache.get(cacheKey);
   const units=stageId?unitsForStage(course,stageId):course.units;
   const itemTargets=units.flatMap(unit=>unit.items.map(exampleTarget).filter(Boolean));
   const vocabTargets=course.vocab.filter(word=>!stageId||word.stageId===stageId).map(vocabTarget);
@@ -130,10 +139,13 @@ export function practiceTargets(course,skill,stageId=null){
   if(skill==='writing')raw=units.flatMap(unit=>unit.items.map(item=>({id:item.id,native:item.native,kanjiForm:item.kanjiForm||'',speechForms:item.speechForms||[item.native],roman:item.roman||'',meaning:item.example?.meaning||item.guide||'',source:'item',stageId:item.stageId,item})));
   else if(skill==='recall')raw=vocabTargets;
   else raw=[...itemTargets,...vocabTargets];
-  const seen=new Set();
-  return raw.filter(target=>{const key=`${target.id}|${target.native}|${target.meaning}`;if(!target.native||seen.has(key))return false;seen.add(key);return true});
+  const seen=new Set(),targets=raw.filter(target=>{const key=`${target.id}|${target.native}|${target.meaning}`;if(!target.native||seen.has(key))return false;seen.add(key);return true});
+  cache.set(cacheKey,targets);return targets;
 }
-export function allTargetIds(course){return unique([...course.units.flatMap(unit=>unit.items.map(item=>item.id)),...course.vocab.map(word=>word.id)])}
+export function allTargetIds(course){
+  if(TARGET_IDS_CACHE.has(course))return TARGET_IDS_CACHE.get(course);
+  const ids=unique([...course.units.flatMap(unit=>unit.items.map(item=>item.id)),...course.vocab.map(word=>word.id)]);TARGET_IDS_CACHE.set(course,ids);return ids;
+}
 
 function validateCourseIds(){
   for(const course of courses){
@@ -161,11 +173,15 @@ export const conversations={
   ]
 };
 export function conversationItems(course,stageId=null){
-  const list=conversations[course.id]||[];if(!list.length)return[];
+  let cache=CONVERSATION_CACHE.get(course);if(!cache){cache=new Map();CONVERSATION_CACHE.set(course,cache)}
+  const cacheKey=stageId||'*';if(cache.has(cacheKey))return cache.get(cacheKey);
+  const source=conversations[course.id]||[];
+  if(!source.length){cache.set(cacheKey,[]);return[]}
   const firstStage=availableStages(course)[0]?.id;
-  return list.filter(item=>item.stageId?(!stageId||item.stageId===stageId):(!stageId||stageId===firstStage)).map(item=>{
+  const items=source.filter(item=>item.stageId?(!stageId||item.stageId===stageId):(!stageId||stageId===firstStage)).map(item=>{
     const speechForms=speechFormsFor(course,{native:item.answer,kanjiForm:item.kanjiForm,speechForms:item.speechForms,speechAliases:item.speechAliases},item.answer);
     return{...item,speechForms};
   });
+  cache.set(cacheKey,items);return items;
 }
 export function hasConversation(course,stageId=null){return conversationItems(course,stageId).length>0}

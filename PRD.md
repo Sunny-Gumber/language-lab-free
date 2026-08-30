@@ -2,9 +2,11 @@
 
 ## 1. Product summary
 
-Language Lab Free is a free, mobile-first language-learning web application designed to help learners build practical language ability through guided, adaptive practice rather than a collection of disconnected study tools.
+Language Lab Free is a **guided adaptive language-learning platform with deepening Japanese and Mandarin paths and foundation courses for eight additional languages**.
 
-The product supports:
+The product is designed around a learning loop that moves a learner from understanding a situation to hearing connected language, learning useful forms, retrieving them from memory, reading them in context and finally producing a response.
+
+Supported languages:
 
 - Japanese
 - Mandarin Chinese
@@ -17,232 +19,217 @@ The product supports:
 - Arabic
 - Portuguese
 
-The application works without requiring an account. Signed-in users can optionally synchronize supported learning data across devices through Supabase.
+Japanese and Mandarin are the reference courses for deeper staged curriculum design. Korean, English, Hindi, Spanish, French, German, Arabic and Portuguese currently remain foundation courses and should not be presented as equally deep.
 
-## 2. Product goals
+## 2. Product goal
 
-The product should:
+The long-term product goal is to help a learner build practical language ability rather than simply finish lessons.
 
-1. Help a new learner start quickly without forcing account creation.
-2. Guide learners through a clear progressive Journey.
-3. Mix new material with review of weak and due material.
-4. Build learning around listening, understanding, retrieval, recall and use.
-5. Preserve learner progress locally and, when signed in, safely synchronize it across devices.
-6. Remain usable as a lightweight PWA with meaningful offline capability.
-7. Work well on mobile devices while remaining functional on desktop.
-8. Keep the core product free to run and free to use wherever practical.
+A completed learning path should increasingly train the learner to:
 
-## 3. Primary user states
+1. understand useful spoken language
+2. connect sound, script and meaning
+3. retrieve language without first seeing the answer
+4. understand connected dialogue and reading
+5. respond in their own words
+6. revisit weak material over time
+7. progress from survival communication toward increasingly complex real-world use
 
-### 3.1 New visitor / new learner
+The product must remain honest about course depth. Internal labels such as `advanced` describe curriculum topics and do not by themselves claim JLPT, HSK, CEFR or other certification equivalence.
 
-A first-time learner should see a clear landing-and-start experience rather than an empty progress dashboard.
+## 3. V14 integrated learning loop
 
-The experience should include:
+The normal Journey experience follows this sequence:
 
-- language selection
-- a small listening/demo interaction
-- clear explanation of how learning works
-- honest indication of course depth
-- no-account-required start path
+```text
+Mission
+  -> Model conversation / connected input
+  -> Learn useful forms
+  -> Retrieve from memory
+  -> Connected reading when available
+  -> Free-response scenario
+  -> Stage checkpoint when applicable
+  -> Return weak material later
+```
 
-### 3.2 Returning learner
+### Mission
 
-After real practice history exists, the home experience should become a learner dashboard showing useful continuation and progress information, including:
+The learner first sees a real-world can-do goal and the useful concepts involved.
 
-- Continue Learning
-- today's practice
-- XP goal
-- streak
-- review needs
-- course progress
+### Model conversation
 
-## 4. Core navigation
+When authored dialogue exists, the learner hears language in a multi-turn situation before treating individual targets as flashcards.
 
-The internal learning experience is organized around five primary areas:
+### Learn useful forms
 
-- **Journey** — recommended progressive path and adaptive mixed sessions.
-- **Practice** — focused listening and speaking work for introduced material.
-- **Review** — weak/due material, recall cards and recognition checks.
-- **Explore** — lesson notes, language guide, vocabulary and optional writing.
-- **Progress** — skill and course progress.
+The learner connects sound, script, meaning and grammar/pronunciation guidance.
 
-Normal language entry should guide the learner toward Journey rather than presenting all tools as equally important.
+Japanese and Mandarin may additionally show:
 
-## 5. Guided learning sequence
+- Kanji/Hanzi
+- Kana/Pinyin
+- Romaji/Pinyin scaffolding
+- Hindi/Devanagari pronunciation guidance
 
-A guided Journey activity follows this learning sequence:
+### Retrieve
 
-1. **Context** — understand the goal or foundation skill.
-2. **Listen** — hear the language before relying heavily on text.
-3. **Understand** — connect sound, form and meaning.
-4. **Check** — perform recognition/listening comprehension.
-5. **Recall** — retrieve language from meaning without first seeing the answer.
-6. **Use** — speak or produce the target in a small task.
-7. **Complete** — record evidence, schedule weak material to return and continue.
+The learner must bring the language back from meaning rather than only recognize it passively. Incorrect retrieval should cause the target to return later in the same session or future review.
 
-## 6. Adaptive session behavior
+### Connected reading
 
-Journey sessions should mix old and new material.
+Where authored reading exists, familiar language appears inside a longer message. Translation is support, not the first thing shown.
 
-Current planning behavior:
+### Free-response scenario
 
-- No scored history: 0 review + 3 new.
-- Recent accuracy below 60%: 4 review + 1 new.
-- Recent accuracy 60–79%: 3 review + 2 new.
-- Recent accuracy 80% or higher: 2 review + 3 new.
+The learner receives a communicative task and responds in their own words. Open responses must **not** be falsely graded against one mandatory model sentence.
 
-The system should prioritize due and weak targets for review.
+Browser speech recognition may display what the browser heard. It remains transcript evidence, not phoneme-level pronunciation, accent, pitch-accent or Mandarin tone scoring.
 
-Wrong choices should be retained as useful learning evidence and may return as later distractors. A difficult target should be inserted again later in the same session rather than being treated as learned after one exposure.
+### Stage checkpoint
 
-A paused Journey session should resume the exact saved session/item/step when possible instead of silently recalculating a different recommended unit.
+At the end of a stage, the learner should see the stage can-do list and perform a connected task rather than only answer isolated multiple-choice questions.
 
-## 7. Language-specific learning behavior
+## 4. Adaptive session planning
 
-The framework is shared, but scaffolding should respect the language.
+Journey sessions continue to mix previously seen material with new material.
+
+Current adaptive target mix:
+
+- no scored history: 0 review + 3 new
+- recent accuracy below 60%: 4 review + 1 new
+- recent accuracy 60–79%: 3 review + 2 new
+- recent accuracy 80%+: 2 review + 3 new
+
+Weak and due targets should receive higher review priority.
+
+V14 may place the selected targets inside dialogue, retrieval and production activities instead of presenting the session as a flat list of independent cards.
+
+During the current product test phase, all units may remain directly accessible so advanced units and interactions can be tested without manufacturing learner history.
+
+## 5. Language-specific requirements
 
 ### Japanese
 
-- Start with sound foundations.
-- Introduce useful greetings and self-introduction early.
-- Interleave kana with communication.
-- Fade romanization as listening/recognition becomes stronger.
-- Provide learner-friendly Hindi/Devanagari pronunciation support while retaining Romaji.
+The Japanese course should progressively integrate:
+
+- sound foundations
+- Hiragana and Katakana
+- practical vocabulary and grammar
+- Kanji attached to already-known vocabulary/grammar
+- connected dialogue
+- increasingly long reading
+- casual, polite, honorific and humble register
+- spontaneous and structured production
+
+Romaji should fade as recognition improves. Hindi pronunciation support may remain visible longer as an optional learner aid. Authored `kanjiForm`, `speechForms` and `speechAliases` must be accepted by speech transcript matching.
 
 ### Mandarin Chinese
 
-- Begin with tones and Pinyin foundations.
-- Introduce basic questions and greetings before character-heavy work.
-- Fade Pinyin support gradually as recognition improves.
-- Provide learner-friendly Hindi/Devanagari pronunciation support and tone guidance while retaining Pinyin.
+The Mandarin course should progressively integrate:
 
-### Korean
+- Pinyin and the four tones
+- tone-pair awareness
+- Hanzi
+- practical vocabulary and grammar
+- aspect and complement systems
+- 把 / 被 and other intermediate structures
+- connected dialogue and reading
+- increasingly open production
 
-- Develop useful phrases and Hangul recognition together.
+Pinyin may fade as recognition grows. Hindi/Devanagari pronunciation support should preserve tone guidance. Audio remains authoritative for tone learning.
 
-### Arabic / RTL courses
+### Other eight languages
 
-- Develop spoken chunks and right-to-left script familiarity together.
+The other eight languages currently provide practical foundations using the same learning engine. They should be expanded only after the deeper Japanese/Mandarin course model is proven.
 
-### Latin-script languages
+## 6. Navigation
 
-- Move into practical communication sooner because extensive script training is not required.
+The learning product uses five primary areas:
 
-## 8. Learning evidence and mastery rules
+- **Journey** — guided integrated path and recommended next learning session
+- **Practice** — focused listening, shadowing, model-answer speaking and conversation drills
+- **Review** — weak/due material, recall and recognition
+- **Explore** — lesson notes, language guide, vocabulary and writing
+- **Progress** — evidence and course progress
 
-The system should derive learning state from real practice evidence.
+Journey is the normal entry point.
 
-Important rules:
+## 7. Speech behavior
 
-- Passive audio playback does not award XP or mastery.
-- The homepage demo does not award XP or mastery.
-- Active attempts generate learning events.
-- Guided listening/check generates listening and recognition evidence.
-- Reverse retrieval generates recall evidence.
-- Browser speech recognition may generate assessed transcript-match evidence.
-- Manual speaking is unscored practice coverage, not a fake failed attempt.
-- Writing records effort/coverage until real handwriting assessment exists.
-- Repeating the same or lower scored attempt for the same target/skill/day should not repeatedly inflate local XP.
-- Derived XP should reduce duplicate multi-device awards by grouping target + skill + day and using the strongest applicable evidence.
-- Unit progression should rely on practice coverage and active mastery, not XP alone.
+Speech transcript matching must use authored accepted forms rather than one surface string.
 
-Current communication-weighted assessed mastery emphasis:
+For example, a Japanese target may accept:
 
-- Listening: 40%
-- Speaking: 30%
-- Recognition: 15%
-- Recall: 10%
-- Writing: tracked separately as practice coverage until genuine handwriting assessment exists
+```text
+いぬ
+犬
+イヌ
+```
 
-## 9. Progress persistence
+as equivalent transcript representations when those forms belong to the same authored target.
 
-### Local
+Free-response scenarios are different: the system may capture the transcript but should not assign a percentage merely because the response differs from one sample sentence.
 
-- `localStorage` stores small account/Guest preferences, UI state, sync cursor and course-position metadata.
-- IndexedDB stores append-oriented learning-event history.
+## 8. Learning evidence
 
-### Signed-in cloud sync
+The system may continue to record learning events for practice and adaptive decisions.
 
-Supabase stores:
+Important semantics:
 
-- `profiles`
-- `learning_events`
-- `course_positions`
+- passive playback is not learning mastery evidence
+- listening checks can be assessed
+- retrieval can be assessed
+- fixed-target speech can use transcript-match evidence
+- open free response is production practice unless genuine semantic/pronunciation assessment exists
+- manual speaking is practice coverage, not a fake 0% failure
+- writing is effort/coverage until genuine writing assessment exists
 
-Requirements:
+XP is optional product feedback and must not define curriculum completion by itself.
 
-- Learning event synchronization should be incremental rather than repeatedly downloading the complete event ledger.
-- Event UUIDs should provide deduplication.
-- Course-position conflicts should prefer the newest `client_updated_at` value.
-- Preference synchronization should track dirty fields rather than overwriting the server with an entire stale preference snapshot.
-- Authenticated users must only be able to read/write their own rows through Row Level Security.
+## 9. Persistence and accounts
 
-## 10. Account behavior
+The current implementation supports:
 
-The product should support:
-
-- no-account Guest use
+- Guest learning
+- IndexedDB learning-event storage
 - Google sign-in where configured
-- first-login learning preferences/onboarding
-- enabled-language management
-- primary-language selection
-- one-time Guest-to-account progress import
-- isolation between Guest data and different signed-in accounts
+- optional Supabase synchronization
+- account-scoped local/cloud data
 
-Cross-account progress leakage is a critical defect and must not be introduced.
+These systems are infrastructure around the learning experience, not the curriculum model itself.
 
-## 11. Offline and PWA requirements
+## 10. Offline and hosting
 
-The already-installed application should be able to start offline using its cached application shell and required local runtime assets.
+The application remains a static browser/PWA product hosted from GitHub Pages.
 
-The service worker should cache application/runtime assets but must not cache Supabase auth/API requests as ordinary static content.
+An installed app should cache the runtime modules required for the V14 learning flow, including the connected Journey planner and Hindi pronunciation support.
 
-Offline support must not depend on an unpinned third-party browser runtime unexpectedly remaining available.
+## 11. Quality gates
 
-## 12. Quality and compatibility
-
-The application must remain mobile-first and regression-tested across representative browser/device sizes.
-
-Current quality checks:
+Normal development checks:
 
 ```bash
 npm run ci
 npm run e2e
 ```
 
-Browser regression coverage includes desktop Chromium, Android emulation, iPhone WebKit emulation, account/cross-device behavior, Guest import, IndexedDB persistence, Journey behavior, first-visit/returning-home behavior and offline PWA startup.
+V14 regression coverage should include:
 
-## 13. Hosting and deployment constraints
+- first-visit flow
+- honest course-depth presentation
+- integrated Journey sequence
+- connected dialogue
+- retrieval + speaking
+- accepted speech forms
+- Japanese/Mandarin Hindi pronunciation guidance
+- saved V14 activity resume
+- account/Guest flows where still enabled
+- offline PWA startup
 
-- Production is published from `main` to GitHub Pages.
-- The application should remain compatible with static hosting unless a future product requirement explicitly changes that architecture.
-- Paid infrastructure or required paid APIs should not be introduced without explicit approval.
+## 12. Current limitation statement
 
-## 14. Known limitations
+Language Lab Free should currently be described as:
 
-Current limitations that should be represented honestly in the product:
+> **A guided adaptive language-learning platform with deepening Japanese and Mandarin paths and foundation courses for eight additional languages.**
 
-- Browser speech scoring is transcript-match based, not phoneme-level pronunciation/accent/tone scoring.
-- Writing does not yet validate handwriting stroke shape/order with AI.
-- TTS quality and voice-gender identification vary by browser/OS.
-- Review scheduling is a lightweight interval model, not full FSRS.
-- Many unit Can-Do statements are derived from unit goals rather than individually authored task metadata.
-- Mandarin still needs dedicated tone-pair discrimination beyond general listening/recall Journey work.
-- Japanese/Mandarin advanced labels describe the internal course path, not official JLPT/HSK certification.
-- Japanese and Mandarin currently have the deepest paths; the other eight languages are primarily foundation courses.
-
-## 15. Success criteria for future changes
-
-A feature or release should be considered successful when it improves learner usefulness without regressing:
-
-- data integrity
-- account isolation
-- Guest use
-- adaptive progression
-- offline startup
-- mobile usability
-- existing tested learning behavior
-- free/static-hosting viability unless intentionally changed
-
-See `TASKS.md` for tracked current and candidate follow-up work.
+It should not yet claim that every supported course can independently take any learner from absolute zero to certified advanced proficiency.

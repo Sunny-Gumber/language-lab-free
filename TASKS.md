@@ -2,129 +2,115 @@
 
 ## Current product version
 
-`13.1.0`
+`14.0.0`
 
-This file is the lightweight project tracker for ChatGPT/Codex and human contributors. It is intentionally shorter than the PRD and architecture documents.
+Language Lab Free is currently positioned as:
 
-## Current status
+> **A guided adaptive language-learning platform with deepening Japanese and Mandarin paths and foundation courses for eight additional languages.**
 
-### Completed / established
+V14 is a test-phase learning-model rewrite. Backward compatibility with earlier test progress is not a product blocker unless explicitly requested; security, account isolation and secret-handling rules still apply.
 
-- [x] Mobile-first multi-language learning platform.
+## Completed / established
+
+### V14 learning model
+
+- [x] Journey rewritten around an integrated learning flow rather than isolated item screens.
+- [x] Mission / can-do orientation before target memorisation.
+- [x] Connected multi-turn dialogue when authored content exists.
+- [x] Adaptive old/new target selection retained inside the richer flow.
+- [x] Active retrieval from meaning.
+- [x] Wrong retrieval can schedule a same-session retry.
+- [x] Connected reading when authored content exists.
+- [x] Free-response production task that does **not** fake-grade every answer against one model sentence.
+- [x] Stage checkpoint presentation when checkpoint metadata exists.
+- [x] All units directly accessible during the V14 test phase.
+- [x] Japanese/Mandarin Hindi/Devanagari pronunciation support retained in the new Journey.
+- [x] Romaji/Pinyin scaffolding can fade independently from Hindi pronunciation support.
+- [x] Fixed-target speech uses authored `kanjiForm`, `speechForms` and `speechAliases` accepted forms.
+- [x] Focused Practice also uses accepted speech forms instead of one surface string.
+- [x] Japanese Kanji/Hiragana/Katakana transcript equivalence retained.
+- [x] V14 unit/activity resume metadata persists locally.
+- [x] V14 runtime is included in the offline/PWA cache.
+
+### Existing platform infrastructure retained
+
+- [x] Mobile-first 10-language platform.
 - [x] Guest learning without required sign-in.
 - [x] Google sign-in/account flow where configured.
 - [x] Optional Supabase account synchronization.
 - [x] Guest-to-account progress import.
-- [x] Account/Guest progress isolation.
+- [x] Account/Guest progress isolation and RLS-backed cloud ownership.
 - [x] IndexedDB learning-event persistence.
-- [x] Event-derived XP, streak, mastery, coverage and review state.
 - [x] Incremental learning-event cloud sync.
 - [x] Conflict-safe course-position synchronization.
 - [x] Dirty-field preference synchronization.
-- [x] Offline-capable PWA application shell.
-- [x] First-visit landing/start experience.
-- [x] Returning-learner dashboard.
-- [x] Journey / Practice / Review / Explore / Progress structure.
-- [x] Adaptive old/new Journey session planning.
-- [x] Weak/due target review prioritization.
-- [x] Same-session retry for difficult material.
+- [x] First-visit start experience and returning-learner dashboard.
+- [x] Journey / Practice / Review / Explore / Progress navigation.
 - [x] Stable structural learning target IDs.
-- [x] Japanese and Mandarin deeper curriculum paths.
-- [x] Language-specific scaffolding.
-- [x] Hindi/Devanagari pronunciation guidance for Japanese and Mandarin.
-- [x] Japanese speech transcript matching accepts common Kanji/Hiragana/Katakana equivalents instead of false-failing the same spoken word.
-- [x] Data-driven authored speech forms: `kanjiForm`, `speechForms`, and `speechAliases` are normalized into accepted transcript equivalents so future content does not require speech-engine edits for each word.
-- [x] Exact paused Journey session resume behavior.
-- [x] Desktop Chromium, Android emulation, iPhone WebKit and offline PWA regression coverage.
 - [x] GitHub Pages deployment from `main`.
-- [x] `PRD.md`, `ARCHITECTURE.md`, `AGENTS.md`, `TASKS.md`, `CHANGELOG.md` project-control documentation.
+- [x] Project-control documentation (`PRD.md`, `ARCHITECTURE.md`, `AGENTS.md`, `TASKS.md`, `CHANGELOG.md`).
 
-## Protected behavior — do not break
+## Protected behavior
 
-Any future task touching these areas must include regression checks:
+Even during the test phase, do not regress these contracts without an explicit architectural decision:
 
-- [ ] Guest mode works without account creation.
-- [ ] Google/account sign-in does not destroy local progress.
-- [ ] Guest-to-account import does not duplicate or leak another account's progress.
-- [ ] Signed-in users remain isolated by RLS and local account scoping.
-- [ ] Learning events remain append-oriented and persist in IndexedDB.
-- [ ] Passive audio/home demo does not generate XP/mastery.
+- [ ] Never commit service-role keys, database passwords, OAuth client secrets or private tokens.
+- [ ] Authenticated users remain isolated by RLS and local account scoping.
+- [ ] Guest and signed-in account data do not leak into each other.
+- [ ] Learning events remain in IndexedDB rather than a growing localStorage snapshot.
+- [ ] Passive audio/home demo does not generate mastery evidence.
 - [ ] Manual speaking is not treated as a fake scored failure.
-- [ ] Japanese browser transcripts such as `犬` must not score 0% against equivalent Kana targets such as `いぬ`.
-- [ ] Newly authored alternate written speech forms must be accepted through content metadata rather than requiring a hard-coded engine mapping for every new item.
-- [ ] Writing remains effort/coverage until real assessment exists.
-- [ ] Unit progression is not reduced to XP-only unlocking.
-- [ ] Target IDs remain stable across curriculum reordering where possible.
-- [ ] Incremental Supabase sync does not revert to full stale-snapshot overwrites.
-- [ ] Course-position conflicts prefer the newest client update timestamp.
-- [ ] Preference sync does not overwrite unrelated newer fields.
-- [ ] Journey Continue/Resume restores the saved session/item/step.
-- [ ] Offline installed app can still boot after runtime/service-worker changes.
-- [ ] GitHub Pages production remains compatible with the runtime.
+- [ ] Open/free-response speaking is not assigned a percentage against one arbitrary model answer.
+- [ ] Fixed-target speech uses accepted authored forms.
+- [ ] Japanese browser transcripts such as `犬`, `いぬ` and `イヌ` can represent the same authored spoken target.
+- [ ] Hindi pronunciation support remains available for Japanese and Mandarin where source Romaji/Pinyin exists.
+- [ ] Writing remains effort/coverage until genuine assessment exists.
+- [ ] V14 saved unit/activity can resume after reload when possible.
+- [ ] Offline installed app can boot after runtime/service-worker changes.
 - [ ] Mobile layouts remain usable on Android/iPhone-sized screens.
 
-## Candidate next improvements
+## Next curriculum work — highest priority
 
-These are **not automatically approved roadmap commitments**. They are known product opportunities/limitations already identified in the current product documentation. Move an item into active work only when explicitly selected.
+### Japanese reference course
 
-### Learning quality
+- [ ] **Kanji integration batch 1: units 13–17.** Add `kanjiForm` to vocabulary/grammar/examples already known in kana; introduce roughly 5–10 useful Kanji per unit rather than cold character lists.
+- [ ] Expand grammar-heavy units from four examples toward 6–8 meaningful examples where a grammar point has multiple functions.
+- [ ] Add explicit contrast pairs: e.g. polite/plain, て-form functions, passive/causative distinctions, register contrasts.
+- [ ] Author explicit `canDo`, scenario and dialogue metadata instead of relying on inferred unit goals.
+- [ ] Increase connected reading length gradually by stage.
+- [ ] Add more natural multi-turn dialogues, especially upper/advanced workplace, opinion, inference and register situations.
+- [ ] Expand upper/advanced vocabulary and input volume before treating the path as genuinely advanced.
 
-- [ ] Add dedicated Mandarin tone-pair discrimination exercises.
-- [ ] Author explicit `canDo`, scenario/context and branching-task metadata for more units instead of deriving many statements from unit goals.
-- [ ] Continue deepening the eight foundation-language courses beyond their current depth.
-- [ ] Evaluate a stronger spaced-repetition scheduler only if it can be integrated without corrupting existing event history.
+### Mandarin reference course
 
-### Pronunciation and speaking
+- [ ] Expand 把, 被, potential complements and aspect-marker units with multiple functional examples.
+- [ ] Add completion-vs-change-of-state contrasts for `了` and other minimal-pair grammar contrasts.
+- [ ] Add dedicated tone-pair drills, including 3rd-tone sandhi patterns.
+- [ ] Increase connected dialogue and reading volume by stage.
+- [ ] Add more open production around intermediate plateau grammar.
 
-- [ ] Evaluate more accurate pronunciation assessment than browser transcript matching.
-- [ ] Keep product wording honest until phoneme/accent/tone scoring is genuinely implemented.
+### Both reference courses
 
-### Writing
+- [ ] Author 4–6 line `sampleDialogue` examples for every stage checkpoint.
+- [ ] Add longer natural-speed listening material beyond short browser-TTS sentences.
+- [ ] Add branching scenario metadata so a learner response can lead to a meaningful next turn instead of only one fixed reply.
+- [ ] Build concept relationships between vocabulary, forms, grammar, script, dialogue and reading rather than duplicating disconnected examples.
+- [ ] Evaluate FSRS after content structure is stable; scheduling is not the current blocker.
 
-- [ ] Evaluate real handwriting/stroke-order assessment before assigning writing accuracy/mastery scores.
+### Other eight languages
 
-### Reliability / maintainability
+- [ ] Keep them honestly labelled as foundation courses.
+- [ ] Do not mass-generate shallow “advanced” units.
+- [ ] Expand them only after the Japanese/Mandarin reference-course model has been validated.
 
-- [ ] Keep regression tests aligned whenever new runtime modules are added.
-- [ ] Keep service-worker asset coverage aligned with required runtime files.
-- [ ] Review `.gitignore` if local tooling begins generating additional environment/cache artifacts.
-- [ ] Keep `README.md`, `PRD.md`, `ARCHITECTURE.md`, `AGENTS.md` and `CHANGELOG.md` synchronized with future major releases.
+## Definition of done for V14 learning changes
 
-## Active work
-
-No new feature is marked active by this document at creation time.
-
-When beginning a new version/task, record it here in this format:
-
-```markdown
-### Active: Vxx.x — short title
-
-Goal:
-- ...
-
-Acceptance criteria:
-- [ ] ...
-- [ ] ...
-
-Protected areas affected:
-- ...
-
-Required checks:
-- [ ] npm run ci
-- [ ] npm run e2e
-```
-
-## Definition of done checklist
-
-For a normal code change:
-
-- [ ] Requested behavior implemented.
-- [ ] Relevant regression test added/updated.
+- [ ] The learner understands a situation before memorising forms.
+- [ ] Useful language appears in connected context when content supports it.
+- [ ] Retrieval is required, not only recognition.
+- [ ] Speaking distinguishes fixed-target transcript matching from open production.
+- [ ] Japanese/Mandarin scaffolding remains language-specific.
+- [ ] New runtime modules are included in the service worker when needed.
 - [ ] `npm run ci` passes.
-- [ ] `npm run e2e` passes when browser/PWA behavior is affected.
-- [ ] No new console/runtime errors.
-- [ ] Mobile behavior checked when UI changed.
-- [ ] Offline behavior checked when service-worker/runtime assets changed.
-- [ ] Supabase migration/RLS reviewed when schema changed.
-- [ ] Documentation updated when product/architecture/contracts changed.
-- [ ] `CHANGELOG.md` updated for a release-significant change.
+- [ ] `npm run e2e` passes for browser/PWA-affecting work.
+- [ ] Documentation reflects the actual product rather than aspirational marketing.

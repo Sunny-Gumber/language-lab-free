@@ -2,7 +2,7 @@ import{availableStages,conversationItems,getCourse,hasConversation,practiceTarge
 import{classifyVoice,exactVoiceName,setAudioPreference,setExactVoice,speak,subscribeVoices,voicesFor}from'./audio.js';
 import{recordPractice,skillStats,weakestTarget}from'./learning.js';
 import{getState,updateUi}from'./store.js';
-import{escapeHtml,shuffle,similarity}from'./utils.js';
+import{bestSpeechMatch,escapeHtml,shuffle}from'./utils.js';
 
 const $=id=>document.getElementById(id);
 const TITLES={listen:'Listen first',shadow:'Shadow the audio',meaning:'Speak from meaning',conversation:'Conversation response'};
@@ -151,9 +151,9 @@ export class PracticeController{
     this.target=this.targetFor('speaking');
     if(!this.target){$('practiceBody').innerHTML='<p class="muted">No speaking content is available for this stage yet.</p>';return}
     $('practiceBody').innerHTML=`
-      <div class="audio-prompt"><div class="native-lg">${escapeHtml(this.target.native)}</div><b>${escapeHtml(this.target.roman)}</b><p>${escapeHtml(this.target.meaning)}</p></div>
+      <div class="audio-prompt"><div class="native-lg">${escapeHtml(this.target.kanjiForm||this.target.native)}</div>${this.target.kanjiForm?`<span>${escapeHtml(this.target.native)}</span>`:''}<b>${escapeHtml(this.target.roman)}</b><p>${escapeHtml(this.target.meaning)}</p></div>
       <div class="actions"><button class="primary" data-practice-action="play" type="button">🔊 Listen</button><button class="secondary" data-practice-action="slow" type="button">🐢 Slow</button><button class="secondary" data-practice-action="speak" type="button">🎙 Repeat it</button></div>
-      <div id="practiceFeedback" class="practice-feedback">Listen once, then repeat immediately. The score is transcript similarity, not phoneme or tone accuracy.</div>
+      <div id="practiceFeedback" class="practice-feedback">Listen once, then repeat immediately. The score is accepted-form transcript similarity, not phoneme or tone accuracy.</div>
       <button class="secondary" data-practice-action="next" type="button">Next phrase</button>`;
   }
 
@@ -161,7 +161,7 @@ export class PracticeController{
     this.target=this.targetFor('speaking');
     if(!this.target){$('practiceBody').innerHTML='<p class="muted">No speaking content is available for this stage yet.</p>';return}
     $('practiceBody').innerHTML=`
-      <div class="audio-prompt"><span class="eyebrow">Say this in ${escapeHtml(this.course.name)}</span><h2>${escapeHtml(this.target.meaning)}</h2><p id="practiceReveal" class="blurred-answer">${escapeHtml(this.target.native)} · ${escapeHtml(this.target.roman)}</p></div>
+      <div class="audio-prompt"><span class="eyebrow">Say this in ${escapeHtml(this.course.name)}</span><h2>${escapeHtml(this.target.meaning)}</h2><p id="practiceReveal" class="blurred-answer">${escapeHtml(this.target.kanjiForm||this.target.native)}${this.target.kanjiForm?` · ${escapeHtml(this.target.native)}`:''} · ${escapeHtml(this.target.roman)}</p></div>
       <div class="actions"><button class="primary" data-practice-action="speak" type="button">🎙 Speak answer</button><button class="secondary" data-practice-action="reveal" type="button">Reveal</button><button class="secondary" data-practice-action="play" type="button">🔊 Hear answer</button></div>
       <div id="practiceFeedback" class="practice-feedback">Try to produce the answer before revealing it.</div>
       <button class="secondary" data-practice-action="next" type="button">Next prompt</button>`;
@@ -171,12 +171,12 @@ export class PracticeController{
     const list=conversationItems(this.course,this.stageId);
     if(!list.length){this.mode='listen';this.renderModes();this.renderListen();return}
     const item=list[this.conversationIndex%list.length];
-    this.target={id:`conversation:${this.course.id}:${this.stageId}:${this.conversationIndex%list.length}`,native:item.answer,roman:item.roman,meaning:item.answerMeaning};
+    this.target={id:`conversation:${this.course.id}:${this.stageId}:${this.conversationIndex%list.length}`,native:item.answer,kanjiForm:item.kanjiForm||'',speechForms:item.speechForms?.length?item.speechForms:[item.answer],roman:item.roman,meaning:item.answerMeaning};
     $('practiceBody').innerHTML=`
       <div class="audio-prompt"><span class="eyebrow">Other speaker</span><h3>${escapeHtml(item.meaning)}</h3><button class="primary" data-practice-action="conversation-play" type="button">🔊 Hear prompt</button></div>
       <div class="actions"><button class="primary" data-practice-action="speak" type="button">🎙 Respond</button><button class="secondary" data-practice-action="reveal" type="button">Show model answer</button></div>
-      <div id="practiceReveal" class="practice-feedback blurred-answer"><b>${escapeHtml(item.answer)}</b><br>${escapeHtml(item.roman)} — ${escapeHtml(item.answerMeaning)}</div>
-      <div id="practiceFeedback" class="practice-feedback">One model answer is scored. Other natural responses may also be valid.</div>
+      <div id="practiceReveal" class="practice-feedback blurred-answer"><b>${escapeHtml(item.kanjiForm||item.answer)}</b>${item.kanjiForm?`<br>${escapeHtml(item.answer)}`:''}<br>${escapeHtml(item.roman)} — ${escapeHtml(item.answerMeaning)}</div>
+      <div id="practiceFeedback" class="practice-feedback">This mode checks the model answer. For open-ended responses, use the Journey free-response scenario.</div>
       <button class="secondary" data-practice-action="conversation-next" type="button">Next conversation</button>`;
   }
 
@@ -186,8 +186,8 @@ export class PracticeController{
     const action=event.target.closest('[data-practice-action]')?.dataset.practiceAction;
     if(!action)return;
     if(action==='next'){this.next();return}
-    if(action==='play'){speak(this.target?.native,this.course,{rate:.8});return}
-    if(action==='slow'){speak(this.target?.native,this.course,{rate:.58});return}
+    if(action==='play'){speak(this.target?.kanjiForm||this.target?.native,this.course,{rate:.8});return}
+    if(action==='slow'){speak(this.target?.kanjiForm||this.target?.native,this.course,{rate:.58});return}
     if(action==='speak'){this.recognizeCurrent();return}
     if(action==='reveal'){$('practiceReveal')?.classList.remove('blurred-answer');return}
     if(action==='conversation-next'){this.conversationIndex++;this.renderConversation();return}
@@ -206,7 +206,7 @@ export class PracticeController{
       recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'listening',score:100,xp:8,metadata:{mode:'listen'}});
       recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'recognition',score:80,xp:0,metadata:{mode:'listen-support'}});
     }else recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'listening',score:25,xp:1,metadata:{mode:'listen'}});
-    $('practiceFeedback').innerHTML=`${correct?'✅ Correct':'❌ Not this one'}<br><b>${escapeHtml(this.target.native)}</b> · ${escapeHtml(this.target.roman)} — ${escapeHtml(this.target.meaning)}`;
+    $('practiceFeedback').innerHTML=`${correct?'✅ Correct':'❌ Not this one'}<br><b>${escapeHtml(this.target.kanjiForm||this.target.native)}</b>${this.target.kanjiForm?` · ${escapeHtml(this.target.native)}`:''} · ${escapeHtml(this.target.roman)} — ${escapeHtml(this.target.meaning)}`;
     this.renderSkills();
   }
 
@@ -225,13 +225,11 @@ export class PracticeController{
     recognizer.onerror=event=>{$('practiceFeedback').textContent=`Speech recognition: ${event.error}`};
     recognizer.onend=()=>buttons.forEach(button=>{button.disabled=false;button.textContent=button.dataset.label||'🎙 Speak'});
     recognizer.onresult=event=>{
-      const transcripts=[...event.results[0]].map(result=>result.transcript);
-      const best=Math.max(...transcripts.map(text=>similarity(text,this.target.native)));
-      const score=Math.round(best*100);
+      const transcripts=[...event.results[0]].map(result=>result.transcript),best=bestSpeechMatch(transcripts,this.target.speechForms?.length?this.target.speechForms:[this.target.native],this.course.locale),score=Math.round(best.score*100);
       const xp=score>=85?10:score>=60?5:1;
-      recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'speaking',score,xp,metadata:{mode:this.mode,heard:event.results[0][0].transcript}});
+      recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'speaking',score,xp,metadata:{mode:this.mode,heard:best.transcript,matchedForm:best.expected}});
       if(this.mode==='meaning'||this.mode==='conversation')recordPractice({languageCode:this.course.id,targetId:this.target.id,skill:'recall',score:Math.round(score*.8),xp:0,metadata:{mode:this.mode}});
-      $('practiceFeedback').innerHTML=`Browser heard: <b>${escapeHtml(event.results[0][0].transcript)}</b><br>Text match: <b>${score}%</b> · ${score>=85?'Excellent match':score>=60?'Good attempt':'Listen and retry'}<br><span class="tiny muted">This is transcript matching, not phoneme or Mandarin tone scoring.</span>`;
+      $('practiceFeedback').innerHTML=`Browser heard: <b>${escapeHtml(best.transcript)}</b><br>Accepted-form text match: <b>${score}%</b> · ${score>=85?'Excellent match':score>=60?'Good attempt':'Listen and retry'}<br><span class="tiny muted">This is transcript matching, not phoneme, accent or Mandarin tone scoring.</span>`;
       this.renderSkills();
     };
     recognizer.start();

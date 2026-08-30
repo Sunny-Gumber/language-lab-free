@@ -1,9 +1,9 @@
 {
   "name": "language-lab-free",
   "private": true,
-  "version": "13.1.0",
+  "version": "14.0.0",
   "type": "module",
-  "description": "Mobile-first progressive language learning app with adaptive mixed sessions, retrieval practice and IndexedDB-backed event sync",
+  "description": "Guided adaptive language-learning platform with connected input, retrieval, free response, deepening Japanese/Mandarin paths and eight foundation courses",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "check": "node scripts/check-syntax.js",

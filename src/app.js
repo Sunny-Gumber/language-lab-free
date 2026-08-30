@@ -4,7 +4,7 @@ import{AccountUi}from'./auth-ui.js';
 import{HomeController}from'./home.js';
 import{PracticeController}from'./practice.js';
 import{CourseController}from'./course.js';
-import{JourneyController}from'./resumable-journey.js';
+import{JourneyController}from'./journey-v14.js';
 import{HindiPronunciationController}from'./pronunciation-hi.js';
 
 const $=id=>document.getElementById(id);
@@ -68,7 +68,7 @@ async function boot(){
   if(isSignedIn()&&getState().prefs.dirty)syncNow('boot').catch(()=>{});
   registerServiceWorker();
 
-  window.LanguageLab={version:'13.1',getState:()=>structuredClone(getState()),user:()=>getUser(),sync:()=>syncNow('manual')};
+  window.LanguageLab={version:'14.0',getState:()=>structuredClone(getState()),user:()=>getUser(),sync:()=>syncNow('manual')};
 }
 
 boot().catch(error=>{

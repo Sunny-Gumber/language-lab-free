@@ -1,299 +1,280 @@
-# Architecture — Language Lab Free
+# Architecture — Language Lab Free V14
 
 ## 1. Overview
 
-Language Lab Free is a static, browser-based PWA hosted on GitHub Pages. The application uses ES modules for the runtime, IndexedDB for append-oriented learning-event storage, localStorage for small scoped state, and optional Supabase services for signed-in synchronization.
-
-The architecture intentionally avoids requiring a traditional application server for normal use.
+Language Lab Free is a static, browser-based PWA hosted on GitHub Pages. V14 separates the **learning-flow planner** from the **Journey renderer** so curriculum content can be turned into connected learning experiences instead of a flat sequence of item screens.
 
 ```text
-Browser / PWA
-├── UI + learning runtime (ES modules)
-├── localStorage (small scoped state)
-├── IndexedDB (learning-event ledger)
-├── Service Worker (offline application shell)
-└── Optional Supabase connection
-    ├── Google/Auth session
-    ├── profiles
-    ├── learning_events
-    └── course_positions
-
-GitHub Pages
-└── static production hosting from main
+Course content (V7/V8/V9 authoring layers)
+        |
+        v
+src/data.js
+  normalizes units, stages, targets and speech forms
+        |
+        v
+src/learning-flow.js
+  builds one integrated unit experience
+        |
+        +--> mission
+        +--> dialogue / connected input
+        +--> adaptive review + new targets
+        +--> retrieval
+        +--> connected reading
+        +--> free-response scenario
+        +--> stage checkpoint
+        |
+        v
+src/journey-v14.js
+  renders and records the learner interaction
 ```
 
-## 2. Architectural principles
+The application continues to use ES modules, IndexedDB, localStorage, an offline service worker and optional Supabase account synchronization.
 
-1. **Local-first learner continuity** — Guest learning must work without an account.
-2. **Event-derived learning state** — XP, streak, mastery, coverage and review state are derived from learning evidence rather than treated as authoritative mutable counters.
-3. **Account isolation** — Guest and signed-in account data must remain scoped and must not leak across identities.
-4. **Incremental cloud sync** — synchronize new learning events instead of repeatedly replacing entire progress snapshots.
-5. **Static-hosting compatibility** — keep the core application deployable to GitHub Pages.
-6. **Offline-capable shell** — an installed app should be able to start with cached runtime assets.
-7. **Progressive learning architecture** — Journey is the guiding experience; supporting tools remain available without flattening the product into disconnected utilities.
-8. **Small safe changes** — preserve working behavior and existing tests rather than replacing the runtime wholesale.
+## 2. V14 learning architecture
 
-## 3. Runtime module map
+### `src/learning-flow.js`
 
-### `src/app.js`
+This is the V14 pedagogical planning seam.
 
-Application bootstrap and high-level render coordination. It wires core controllers and routes primary learner actions into the correct feature areas.
+It combines:
 
-### `src/store.js`
+- the current unit
+- stage information
+- adaptive target selection from `src/session.js`
+- V9/V14 dialogue metadata when available
+- V9/V14 reading metadata when available
+- unit production tasks
+- stage checkpoints
+- script/character focus
 
-Holds scoped preferences/UI state, exact course positions and the in-memory view of learning events. Account/Guest scoping is critical here.
+and produces one ordered `experience.activities` array.
 
-### `src/event-db.js`
+Activity types currently include:
 
-IndexedDB persistence layer for the append-oriented learning-event ledger.
+```text
+mission
+ dialogue
+ learn
+ retrieve
+ reading
+ scenario
+ checkpoint
+ complete
+```
 
-### `src/cloud.js`
+Not every unit must contain every activity. Foundation courses can fall back to available item examples while Japanese and Mandarin can use their richer integrated content.
 
-Cloud integration layer. Responsibilities include:
+### `src/journey-v14.js`
 
-- Google authentication integration
-- incremental Supabase learning-event sync
-- profile/preference sync
-- course-position sync
-- conflict handling
-- Realtime/fallback reconciliation behavior
+The V14 Journey controller is the normal learner entry point. It renders the integrated activity list and handles:
 
-### `src/learning.js`
+- mission/can-do orientation
+- multi-turn model dialogue
+- target learning
+- active retrieval
+- same-session retry scheduling
+- connected reading
+- free-response production
+- stage checkpoints
+- speech-recognition capture
+- Journey/Review/Explore navigation
+- lightweight activity resume
 
-Derives learning state from events, including:
-
-- XP
-- streaks
-- mastery
-- practice coverage
-- review scheduling signals
-
-This module should remain evidence-driven rather than depending on mutable snapshot counters.
-
-### `src/data.js`
-
-Normalizes course content and provides curriculum/stage-aware targeting. Persistent learning target IDs are structural so curriculum reordering does not automatically invalidate historical evidence.
+Open production is deliberately **not** forced against one model sentence.
 
 ### `src/session.js`
 
-Builds adaptive Journey sessions. It handles:
+The adaptive target-selection engine remains separate from the presentation flow.
 
-- review/new ratios
-- due/weak target prioritization
-- mistake memory
-- same-session retry behavior
-- language-specific scaffolding
+It continues to decide the review/new mix and prioritize weak/due targets. V14 then places those targets inside richer learning activities.
 
-### `src/audio.js`
+### `src/data.js`
 
-Browser TTS and voice-selection behavior.
+In addition to structural IDs and stage targeting, `src/data.js` owns the speech-authoring contract:
 
-### `src/practice.js`
+```text
+native
+kanjiForm
+speechForms
+speechAliases
+```
 
-Focused listening/speaking practice for previously introduced material.
+Authored equivalent forms are registered for transcript matching. This is especially important for Japanese speech recognition, where a browser may return Kanji, Hiragana or Katakana for the same spoken form.
 
-### `src/course.js`
+## 3. Runtime module map
 
-Detailed lesson notes, language guide, writing, vocabulary, cards, quiz and progress presentation.
+- `src/app.js` — bootstrap and render coordination; imports V14 Journey.
+- `src/store.js` — scoped preferences/UI state, positions and in-memory event view.
+- `src/event-db.js` — IndexedDB learning-event persistence.
+- `src/cloud.js` — authentication and optional Supabase synchronization.
+- `src/learning.js` — event-derived XP, mastery, coverage, streak and review signals.
+- `src/data.js` — course normalization, stages, stable target IDs and speech forms.
+- `src/session.js` — adaptive review/new target planner.
+- `src/learning-flow.js` — V14 integrated unit-experience planner.
+- `src/journey-v14.js` — V14 connected Journey UI and interaction engine.
+- `src/practice.js` — focused listening/speaking practice using authored accepted speech forms.
+- `src/pronunciation-hi.js` — Japanese/Mandarin Hindi pronunciation helper.
+- `src/audio.js` — browser TTS and voice selection.
+- `src/course.js` — detailed lesson notes, vocabulary, writing, cards and progress.
+- `src/home.js` — first-visit course selection and returning dashboard.
+- `src/auth-ui.js` — optional account UX.
+- `src/writing.js` — touch/stylus/mouse writing pad.
+- `src/utils.js` — shared utilities, speech normalization and matching.
 
-### `src/journey.js`
+The older `src/journey.js` and `src/resumable-journey.js` remain historical V13 modules but are no longer the application entry Journey in V14.
 
-Base Journey path and guided-session behavior.
+## 4. Learning-flow data contract
 
-### `src/resumable-journey.js`
+An integrated experience contains the following high-level structure:
 
-Persists and restores the exact paused Journey session state so Continue/Resume does not silently recalculate another unit/item/step.
+```js
+{
+  courseId,
+  unitIndex,
+  unit,
+  stage,
+  canDo,
+  targets,
+  dialogue,
+  reading,
+  production,
+  checkpoint,
+  concepts,
+  activities,
+  mix
+}
+```
 
-### `src/home.js`
+### Target contract
 
-Controls the two home states:
+A selected learning target includes:
 
-- first-visit/new-learner landing-and-start experience
-- returning-learner progress dashboard
+```js
+{
+  id,
+  native,
+  kanjiForm,
+  roman,
+  meaning,
+  speechForms,
+  guide,
+  kind
+}
+```
 
-### `src/auth-ui.js`
+This lets one target participate in listening, retrieval, speech and script presentation without duplicating identity.
 
-User/account UX including:
+## 5. Fixed-target speech vs open production
 
-- sign-in
-- onboarding
-- Guest-to-account import
-- language management
+These are intentionally different systems.
 
-### `src/writing.js`
+### Fixed-target speech
 
-Touch/stylus/mouse writing practice pad.
+When the learner is asked to say a specific target, browser transcripts are compared against the target's accepted authored forms using `bestSpeechMatch()`.
 
-### `src/utils.js`
+This can support cases such as:
 
-Shared pure utilities.
+```text
+犬 == いぬ == イヌ
+```
 
-### `src/pronunciation-hi.js`
+when those forms are authored as equivalents.
 
-Hindi/Devanagari pronunciation guidance layer for supported Japanese and Mandarin learning content.
+### Open free response
 
-## 4. Historical content layers
+When a task allows many natural answers, the browser may capture the transcript but the app does not generate a fake percentage against one sample answer.
 
-Files from V7/V8/V9 remain as course-content authoring/data layers. They are not the primary runtime architecture and should not be used to reintroduce historical monkey-patching or layered override behavior.
+This protects the product from presenting text similarity as semantic conversation ability.
 
-## 5. Persistence architecture
+## 6. Japanese and Mandarin scaffolding
 
-### 5.1 localStorage
+Japanese and Mandarin can display multiple learner aids from the same target:
 
-Use localStorage only for relatively small scoped state such as:
+```text
+script form
+reading
+Romaji/Pinyin
+Hindi/Devanagari pronunciation
+meaning
+```
 
-- account/Guest preferences
-- UI state
-- sync cursor metadata
-- course-position metadata
+`shouldShowRoman()` controls gradual Romaji/Pinyin fade. Hindi pronunciation can remain visible independently.
 
-Do not move a growing learning-event ledger back into localStorage.
+For Mandarin, the Hindi helper preserves tone-number guidance. Audio remains the pronunciation authority.
 
-### 5.2 IndexedDB
+## 7. Learning evidence
 
-IndexedDB stores learning events locally. This avoids localStorage quota pressure and provides a better model for append-oriented historical learning evidence.
+V14 still records evidence through the existing event pipeline so adaptive review and dashboards continue to work.
 
-The event ledger is the basis for derived XP/mastery/coverage/review behavior.
+```text
+learner action
+  -> recordPractice()
+  -> IndexedDB event
+  -> learning.js derived state
+  -> optional incremental Supabase sync
+```
 
-### 5.3 Supabase
+Important distinctions:
 
-The active cloud contract uses:
+- retrieval answer: may be assessed
+- fixed-target speech: may use transcript-match score
+- open scenario response: unscored production evidence
+- connected reading reveal: practice evidence, not fabricated comprehension accuracy
+- stage self-assessment: unscored checkpoint evidence
+
+XP is not the curriculum architecture and does not determine V14 lesson structure.
+
+## 8. Test-phase progression
+
+During V14 testing, all units are directly accessible. The Journey still recommends the first unit lacking sufficient evidence, but testers can open later Japanese/Mandarin stages without manufacturing progress history.
+
+This is intentional while curriculum depth and advanced interactions are still being validated.
+
+## 9. Persistence
+
+### Local
+
+- localStorage: small scoped UI/preferences and V14 activity-resume metadata
+- IndexedDB: learning-event history
+
+### Cloud
+
+Optional Supabase services remain available for account testing:
 
 - `profiles`
 - `learning_events`
 - `course_positions`
 
-See `supabase/README.md` and `supabase/migrations/` for the schema contract and migration history.
+V14 does not require new database tables.
 
-Security requirements:
+## 10. Offline/PWA
 
-- RLS must remain enabled for user-owned tables.
-- authenticated reads/writes must be restricted to the owning user.
-- service-role keys, database passwords and OAuth client secrets must never be committed.
-- the browser publishable Supabase key is intentionally public.
+`sw.js` cache version `language-lab-free-v14-0` includes:
 
-## 6. Synchronization model
+- `journey-v14.css`
+- `src/journey-v14.js`
+- `src/learning-flow.js`
+- `src/session.js`
+- pronunciation/runtime modules
+- the pinned Supabase browser runtime
 
-### Learning events
+An already-installed app should therefore be able to start the V14 learning runtime offline.
 
-Cloud reconciliation is incremental from the last known server `created_at` cursor rather than a full replacement/download of the complete ledger on every sync.
-
-Event UUIDs provide deduplication.
-
-### Course positions
-
-Exact last unit/item position is synchronized per language. Conflict handling keeps the newest `client_updated_at` value.
-
-### Preferences
-
-Preference sync tracks dirty fields independently so a stale client does not overwrite unrelated newer fields by pushing a complete old snapshot.
-
-### Identity transitions
-
-Guest-to-account import is a deliberate one-time transition. It must not create cross-account leakage or duplicate progress inflation.
-
-## 7. Learning-state architecture
-
-The product records evidence and derives state from that evidence.
-
-Examples:
-
-```text
-Learner action
-  -> learning event
-      -> local IndexedDB
-      -> in-memory event view
-      -> learning.js derives XP/mastery/coverage/review
-      -> optional incremental Supabase sync
-```
-
-Important contracts:
-
-- Passive playback/home demo: no XP/mastery.
-- Guided listening/check: listening + recognition evidence.
-- Reverse retrieval: recall evidence.
-- Browser speech recognition: may produce assessed transcript-match evidence.
-- Manual speaking: unscored practice coverage.
-- Writing: effort/coverage, not fabricated handwriting accuracy.
-- Reset: append-only marker invalidating older course events rather than destructive history deletion.
-
-## 8. Adaptive Journey architecture
-
-Journey is built around a sequence:
-
-```text
-Context -> Listen -> Understand -> Check -> Recall -> Use -> Complete
-```
-
-Session planning mixes old and new targets according to recent scored accuracy, while prioritizing due and weak items.
-
-Mistakes can be retained as confusion metadata and difficult targets can reappear later in the same session.
-
-A persisted paused session records enough queue/item/step state to restore exact learner continuity.
-
-## 9. Offline/PWA architecture
-
-The service worker caches the local application shell and required runtime assets.
-
-The offline strategy should:
-
-- allow an already-installed application to boot offline
-- cache local app/runtime assets
-- keep required pinned browser dependencies available
-- avoid treating Supabase auth/API requests as ordinary static cacheable assets
-
-Any new runtime file required for boot must be considered for service-worker asset coverage.
-
-## 10. Testing architecture
-
-Package scripts:
+## 11. Testing
 
 ```bash
-npm run check
-npm test
 npm run ci
 npm run e2e
 ```
 
-`npm run ci` combines syntax/module checks and Node tests.
+V14 browser coverage is intended to exercise:
 
-Playwright regression coverage includes representative desktop/mobile browser flows and PWA/offline behavior.
-
-When changing browser behavior, persistence, authentication, Journey logic, service-worker assets or sync, corresponding regression coverage should be updated.
-
-## 11. Deployment architecture
-
-```text
-feature/hotfix branch
-  -> tests / pull request / CI
-      -> main
-          -> GitHub Pages production
-```
-
-`main` is production.
-
-The current architecture assumes static hosting. A future server-side component should only be introduced when a product requirement cannot reasonably be met with the current model.
-
-## 12. Architectural risk areas
-
-Changes in these areas deserve extra review and testing:
-
-- account/Guest scoping
-- IndexedDB migrations or event semantics
-- Supabase schema/RLS
-- incremental synchronization and deduplication
-- XP/mastery derivation
-- target ID stability
-- Journey queue/session persistence
-- service-worker asset lists/cache versioning
-- authentication transitions
-- curriculum reordering
-
-## 13. Related documents
-
-- `PRD.md` — product requirements and product behavior.
-- `AGENTS.md` — rules for ChatGPT/Codex development.
-- `TASKS.md` — current protected areas and candidate work.
-- `CHANGELOG.md` — release history.
-- `README.md` — user/developer overview and quick reference.
-- `supabase/README.md` — active database/sync contract.
+- visitor vs returning learner state
+- honest course-depth messaging
+- V14 mission -> dialogue -> target -> retrieval flow
+- same-session retry signaling
+- accepted speech forms
+- Hindi pronunciation scaffolding
+- account/Guest infrastructure where enabled
+- IndexedDB persistence
+- V14 PWA offline startup

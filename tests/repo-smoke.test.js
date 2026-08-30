@@ -13,7 +13,7 @@ test('index loads the clean module entry point and required course data',()=>{
   const html=read('index.html');
   assert.match(html,/name="viewport"\s+content="width=device-width,\s*initial-scale=1,\s*viewport-fit=cover"/);
   assert.match(html,/<script type="module" src="\.\/app\.js"><\/script>/);
-  for(const file of ['languages.js','v7-content.js','v8-content.js','v9-content.js','course-export.js']){
+  for(const file of['languages.js','v7-content.js','v8-content.js','v9-content.js','course-export.js']){
     assert.match(html,new RegExp(`src="\\.\\/${file.replaceAll('.','\\.')}"`));
     assert.ok(exists(file),`Missing course content layer: ${file}`);
   }
@@ -21,7 +21,7 @@ test('index loads the clean module entry point and required course data',()=>{
 
 test('every relative ES-module import resolves to a file',()=>{
   const srcDir=path.join(root,'src'),modules=srcModules();
-  assert.ok(modules.length>=13);
+  assert.ok(modules.length>=15);
   for(const module of modules){
     const code=read(path.join('src',module));
     for(const match of code.matchAll(/from['"](\.\/[^'"]+)['"]/g)){
@@ -36,7 +36,6 @@ test('literal DOM ids used by modules are declared or created intentionally',()=
   const pageIds=[...html.matchAll(/\sid="([^"]+)"/g)].map(match=>match[1]);
   const duplicates=pageIds.filter((id,index)=>pageIds.indexOf(id)!==index);
   assert.deepEqual([...new Set(duplicates)],[],`Duplicate ids: ${[...new Set(duplicates)].join(', ')}`);
-
   const modules=srcModules().map(name=>({name,code:read(path.join('src',name))}));
   const dynamicIds=modules.flatMap(({code})=>[
     ...[...code.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]),
@@ -59,55 +58,52 @@ test('clean modules do not monkey-patch functions or inject style rules',()=>{
   assert.equal(code.includes('window.speak='),false);
 });
 
-test('V12 home separates first-visit start UX from learner dashboard',()=>{
+test('home is honest about Japanese/Mandarin depth and eight foundation courses',()=>{
   assert.ok(exists('home-v12.css'));
   const home=read('src/home.js');
-  assert.match(home,/hasLearningHistory/);
-  assert.match(home,/visitor-mode/);
-  assert.match(home,/What do you want to learn\?/);
-  assert.match(home,/Start learning free/);
-  assert.match(home,/openPractice\(button\.dataset\.language\)/);
-  assert.match(home,/Keep your language/);
+  assert.match(home,/Deeper structured paths/);
+  assert.match(home,/Japanese &nbsp; 🇨🇳 Mandarin/);
+  assert.match(home,/Foundation courses/);
+  assert.match(home,/8 more languages/);
 });
 
-test('V13.1 course uses Journey and adaptive mixed sessions as the normal entry point',()=>{
-  assert.ok(exists('src/journey.js'));assert.ok(exists('src/session.js'));assert.ok(exists('journey-v13.css'));
-  const app=read('src/app.js'),journey=read('src/journey.js'),session=read('src/session.js');
-  assert.match(app,/JourneyController/);assert.match(app,/tab:'journey'/);assert.match(app,/version:'13\.1'/);
+test('V14 uses connected input, retrieval, reading and free response as the normal Journey',()=>{
+  assert.ok(exists('src/journey-v14.js'));assert.ok(exists('src/learning-flow.js'));assert.ok(exists('journey-v14.css'));
+  const app=read('src/app.js'),journey=read('src/journey-v14.js'),flow=read('src/learning-flow.js');
+  assert.match(app,/from'\.\/journey-v14\.js'/);assert.match(app,/version:'14\.0'/);assert.match(app,/tab:'journey'/);
   for(const label of['Journey','Practice','Review','Explore','Progress'])assert.match(journey,new RegExp(label));
-  assert.match(journey,/allowNext/);assert.match(journey,/coverage>=60/);assert.match(journey,/guided-journey/);
-  assert.match(session,/sessionMixFromEvents/);assert.match(session,/accuracy<60/);assert.match(session,/review:4,newItems:1/);assert.match(session,/review:2,newItems:3/);
+  for(const type of["type:'mission'","type:'dialogue'","type:'learn'","type:'retrieve'","type:'reading'","type:'scenario'","type:'complete'"])assert.match(flow,new RegExp(type.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  assert.match(journey,/Free-response scenario/);assert.match(journey,/Respond in your own words/);assert.match(journey,/Connected reading/);assert.match(journey,/Model conversation/);
+  assert.match(journey,/bestSpeechMatch/);assert.match(journey,/speechForms/);assert.match(journey,/hindiPronunciationLabel/);
 });
 
-test('V13.1 guided journey follows context input retrieval use and spaced return',()=>{
-  const journey=read('src/journey.js'),session=read('src/session.js');
-  for(const skill of['listening','recognition','recall','speaking'])assert.match(journey,new RegExp(`skill:'${skill}'`));
-  assert.match(journey,/real-world goal/);assert.match(journey,/Listen before you read/);assert.match(journey,/Active recall/);assert.match(journey,/Mini real-world task/);
-  assert.match(journey,/needsRetry/);assert.match(journey,/kind:'retry'/);assert.match(journey,/questionKind:'meaning'/);assert.match(journey,/questionKind:'recall'/);
-  assert.match(session,/mistakeChoices/);assert.match(session,/shouldShowRoman/);assert.match(session,/Japanese pathway/);assert.match(session,/Mandarin pathway/);
+test('V14 keeps adaptive review/new planning while making all units testable',()=>{
+  const flow=read('src/learning-flow.js'),session=read('src/session.js'),journey=read('src/journey-v14.js');
+  assert.match(flow,/buildJourneySession/);assert.match(flow,/plan\.queue/);
+  assert.match(session,/sessionMixFromEvents/);assert.match(session,/review:4,newItems:1/);assert.match(session,/review:2,newItems:3/);
+  assert.match(journey,/unlocked:true/);assert.match(journey,/All units are open during the test phase/);
 });
 
-test('V11.2 uses structural target IDs and stage-aware practice data',()=>{
-  const data=read('src/data.js');
-  assert.match(data,/structuralItemId/);assert.match(data,/stageId/);assert.match(data,/conversationItems/);assert.equal(data.includes('hashString'),false);
+test('speech practice uses authored accepted forms instead of one surface string',()=>{
+  const practice=read('src/practice.js'),data=read('src/data.js'),utils=read('src/utils.js');
+  assert.match(practice,/bestSpeechMatch/);assert.match(practice,/speechForms/);
+  assert.match(data,/kanjiForm/);assert.match(data,/speechAliases/);assert.match(data,/speechForms/);
+  assert.match(utils,/registerSpeechForms/);assert.match(utils,/bestSpeechMatch/);
 });
 
-test('event history is backed by IndexedDB rather than localStorage snapshots',()=>{
+test('event history remains backed by IndexedDB',()=>{
   assert.ok(exists('src/event-db.js'));
   const store=read('src/store.js');
   assert.match(store,/from'\.\/event-db\.js'/);assert.match(store,/events:\[\]/);assert.match(store,/eventCursor/);
 });
 
-test('service worker caches only known app assets, adaptive Journey, pinned Supabase runtime and bypasses API traffic',()=>{
+test('service worker caches V14 flow assets, pinned Supabase runtime and bypasses API traffic',()=>{
   const sw=read('sw.js');
   const match=sw.match(/const ASSETS=\[(.*?)\];/s);assert.ok(match,'ASSETS list missing');
   const refs=[...match[1].matchAll(/['"]\.\/([^'"]*)['"]/g)].map(item=>item[1]).filter(Boolean);
   for(const ref of refs)assert.ok(exists(ref),`Missing cached asset: ${ref}`);
-  assert.ok(refs.includes('home-v12.css'),'Home stylesheet is not cached');
-  assert.ok(refs.includes('journey-v13.css'),'Journey stylesheet is not cached');
-  assert.ok(refs.includes('src/journey.js'),'Journey module is not cached');
-  assert.ok(refs.includes('src/session.js'),'Adaptive session module is not cached');
-  assert.match(sw,/language-lab-free-v13-1/);assert.match(sw,/url\.origin!==self\.location\.origin/);assert.match(sw,/SUPABASE_PINNED/);assert.match(sw,/@supabase\/supabase-js@2\.112\.3/);assert.match(sw,/self\.skipWaiting\(\)/);assert.match(sw,/self\.clients\.claim\(\)/);
+  for(const required of['home-v12.css','journey-v14.css','src/journey-v14.js','src/learning-flow.js','src/session.js'])assert.ok(refs.includes(required),`V14 cache missing ${required}`);
+  assert.match(sw,/language-lab-free-v14-0/);assert.match(sw,/url\.origin!==self\.location\.origin/);assert.match(sw,/SUPABASE_PINNED/);assert.match(sw,/@supabase\/supabase-js@2\.112\.3/);assert.match(sw,/self\.skipWaiting\(\)/);assert.match(sw,/self\.clients\.claim\(\)/);
 });
 
 test('manifest icon files exist',()=>{
@@ -115,7 +111,7 @@ test('manifest icon files exist',()=>{
   for(const icon of manifest.icons){const src=String(icon.src||'').replace(/^\.\//,'');assert.ok(src&&exists(src),`Missing manifest icon: ${src}`)}
 });
 
-test('database migrations are versioned in the repository',()=>{
+test('database migrations remain versioned in the repository',()=>{
   for(const file of[
     'supabase/migrations/20260827_v11_event_learning_model.sql',
     'supabase/migrations/20260828_v11_course_positions.sql',
@@ -124,7 +120,7 @@ test('database migrations are versioned in the repository',()=>{
   ])assert.ok(exists(file),`Missing migration: ${file}`);
 });
 
-test('top-level runtime no longer references legacy runtime modules',()=>{
+test('top-level runtime does not reference legacy runtime modules',()=>{
   const runtime=read('index.html')+'\n'+read('app.js')+'\n'+read('sw.js');
-  for(const old of ['app-core.js','auth.js','auth.css','cloud-sync-v10.js','core-logic.js','storage-scope.js','skills-v10.js','v6-learning.js','v8-listen-speak.js','v9-course-ui.js','v10-hardening.js','onboarding-v10.js','my-languages-v10.js','supabase-client.js'])assert.equal(runtime.includes(old),false,`Legacy runtime still referenced: ${old}`);
+  for(const old of['app-core.js','auth.js','auth.css','cloud-sync-v10.js','core-logic.js','storage-scope.js','skills-v10.js','v6-learning.js','v8-listen-speak.js','v9-course-ui.js','v10-hardening.js','onboarding-v10.js','my-languages-v10.js','supabase-client.js'])assert.equal(runtime.includes(old),false,`Legacy runtime still referenced: ${old}`);
 });

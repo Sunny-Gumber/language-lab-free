@@ -4,19 +4,19 @@
 
 This file is the operating guide for ChatGPT/Codex and other coding agents working on Language Lab Free.
 
-The goal is to improve the product without breaking working learning, account, sync, offline, or deployment behavior.
+The current priority is **learning quality and pedagogical architecture**, not preservation of every V13 test-state detail.
 
-## Project snapshot
+## Product snapshot
 
-- Product: free, mobile-first, multi-language learning platform.
-- Current package version: `13.1.0`.
+- Product: **A guided adaptive language-learning platform with deepening Japanese and Mandarin paths and foundation courses for eight additional languages.**
+- Current package version: `14.0.0`.
+- Product status: active test/development phase.
 - Production branch: `main`.
-- Production hosting: GitHub Pages from `main`.
-- Optional signed-in sync: Supabase.
-- Local learning-event persistence: IndexedDB.
-- Small account/UI preferences and positions: localStorage plus Supabase where applicable.
-- App runtime: browser ES modules under `src/`.
-- Tests: Node tests plus Playwright browser/PWA regression coverage.
+- Hosting: GitHub Pages from `main`.
+- Runtime: browser ES modules under `src/`.
+- Local event persistence: IndexedDB.
+- Optional account sync: Supabase.
+- Tests: Node checks + Playwright browser/PWA coverage.
 
 Before changing code, read:
 
@@ -25,113 +25,139 @@ Before changing code, read:
 3. `TASKS.md`
 4. `CHANGELOG.md`
 5. `README.md`
-6. `supabase/README.md` for database or sync work
+6. `supabase/README.md` for database/sync work
 
-## Non-negotiable rules
+## V14 development mandate
 
-1. **Do not remove a working feature unless the task explicitly requires it.**
-2. **Preserve backward compatibility for learner data whenever reasonably possible.**
-3. **Never expose secrets.** Do not commit Supabase service-role keys, database passwords, OAuth client secrets, private tokens, or credentials.
-4. The browser Supabase publishable key may be public by design; privileged secrets may not.
-5. Do not change the Supabase schema casually. Any schema change must have a migration and corresponding documentation update.
-6. Keep authenticated data protected by Row Level Security.
-7. Never reintroduce cross-account or account/Guest progress leakage.
-8. Preserve Guest mode and Guest-to-account import behavior.
-9. Preserve offline/PWA startup unless the requested change intentionally changes offline support.
-10. Preserve exact Journey resume behavior: a paused guided session should resume the saved session/item/step rather than silently recalculating another unit.
-11. Preserve event-based learning history. Do not replace append-oriented learning events with mutable snapshot counters.
-12. Preserve stable structural learning target IDs. Do not derive persistent IDs from translated display text or raw list positions.
-13. Do not award XP/mastery for passive audio playback or the home demo.
-14. Manual speaking practice must not be recorded as fake 0% assessed speaking.
-15. Writing is practice/coverage until genuine handwriting assessment exists; do not fabricate writing accuracy.
-16. Unit progression must not become XP-only. Current readiness uses practice coverage and active mastery evidence.
-17. Keep the app mobile-first and usable on desktop, Android-sized layouts, and iPhone-sized layouts.
-18. Avoid adding paid infrastructure or required paid APIs without explicit approval.
-19. Prefer the smallest safe change over a broad rewrite.
-20. Do not replace the existing architecture simply because another framework is fashionable.
+The user has explicitly approved broad learning-flow/code rewrites during the test phase.
 
-## Protected product behavior
+Therefore:
 
-Treat these areas as regression-sensitive:
+1. **Do not preserve a weak pedagogical design only for backward compatibility with test data.**
+2. Large coherent rewrites are allowed when they materially improve the learning model.
+3. XP, old completion thresholds and historical test progress are not sacred product contracts.
+4. Prefer correct learning semantics over keeping an old screen sequence unchanged.
+5. Do not mass-generate shallow “advanced” content merely to increase unit count.
+6. Japanese and Mandarin should be treated as reference courses for the deeper learning model before expanding all ten languages equally.
+7. Keep product claims honest: an internal advanced stage is not automatically certified advanced proficiency.
 
-- New-visitor home experience versus returning-learner dashboard.
-- Journey / Practice / Review / Explore / Progress navigation model.
-- Adaptive old/new session mixing.
-- Due and weak-item review prioritization.
-- Same-session retry of difficult targets.
-- Listening, recognition, recall, speaking/use evidence.
-- Japanese and Mandarin language-specific scaffolding.
-- Hindi/Devanagari pronunciation guidance for Japanese and Mandarin.
-- Google sign-in and account onboarding.
-- Guest mode and one-time Guest progress import.
-- My Languages and primary-language preference behavior.
-- IndexedDB learning-event persistence.
-- Incremental Supabase event synchronization.
-- Course-position conflict handling using client update timestamps.
-- Preference dirty-field synchronization.
-- Offline PWA shell and pinned browser runtime dependencies.
-- GitHub Pages deployment from `main`.
+## Non-negotiable safety/security rules
 
-## Architecture boundaries
+Even in the test phase:
 
-Use the existing module responsibilities unless there is a clear reason to change them:
+1. **Never expose secrets.** Do not commit Supabase service-role keys, database passwords, OAuth client secrets, private tokens or credentials.
+2. The browser Supabase publishable key may be public by design; privileged secrets may not.
+3. Keep authenticated tables protected by Row Level Security.
+4. Do not introduce cross-account or Guest/account data leakage.
+5. Any Supabase schema change requires a migration and documentation update.
+6. Keep GitHub Pages deployable unless an explicit product decision changes hosting.
+7. Avoid required paid infrastructure/APIs without explicit approval.
 
-- `src/app.js` — bootstrap and render coordination.
-- `src/store.js` — scoped preferences/UI state, exact positions, in-memory event view.
-- `src/event-db.js` — IndexedDB learning-event persistence.
-- `src/cloud.js` — Google auth, Supabase sync, preference sync, positions, Realtime/fallback reconciliation.
-- `src/learning.js` — derived XP, streak, mastery, coverage, review scheduling.
-- `src/data.js` — normalized course data, curriculum/stage targeting, structural target IDs.
-- `src/session.js` — adaptive review/new planning, weak/due selection, mistake memory, scaffolding.
-- `src/audio.js` — TTS and voice selection.
-- `src/practice.js` — listening/speaking practice.
-- `src/course.js` — lesson notes, guide, writing, vocabulary, cards, quiz, progress.
-- `src/journey.js` — base Journey behavior.
-- `src/resumable-journey.js` — persisted/resumable Journey session behavior.
+## V14 learning contracts
+
+Treat these as the active pedagogical contracts:
+
+- Journey is the normal learning entry point.
+- `src/learning-flow.js` converts curriculum + adaptive targets into a connected experience.
+- `src/journey-v14.js` is the active Journey UI/interaction engine.
+- The normal flow should move through situation/context, connected input, useful forms, retrieval, connected reading where available, production and checkpointing.
+- Adaptive review/new target selection remains useful, but must serve the learning flow rather than define the whole product.
+- Wrong retrieval can cause same-session return.
+- Open/free-response tasks must not be fake-scored against one arbitrary model sentence.
+- Fixed-target speech may use transcript matching against authored accepted forms.
+- Japanese speech targets can use `kanjiForm`, `speechForms` and `speechAliases` so Kanji/Kana/Katakana representations do not false-fail.
+- Japanese/Mandarin Hindi pronunciation support remains a learner aid; audio is still the pronunciation authority.
+- Romaji/Pinyin may fade as recognition improves.
+- Writing remains practice/coverage until genuine writing assessment exists.
+- All units may remain directly accessible while V14 is being tested.
+
+## Course-depth rules
+
+### Japanese
+
+Prioritize:
+
+- Kanji integrated with already-known vocabulary/grammar
+- richer examples per grammar function
+- connected dialogues
+- progressively longer reading/listening
+- casual/polite/register contrasts
+- meaningful upper/advanced production
+
+### Mandarin
+
+Prioritize:
+
+- tone-pair work
+- richer 把 / 被 / complement / aspect practice
+- Hanzi in connected contexts
+- connected dialogue/reading
+- intermediate plateau production
+
+### Other eight languages
+
+Keep them honestly labelled as foundation courses until the deeper Japanese/Mandarin model is validated. Do not copy “advanced” labels without equivalent content depth.
+
+## Active module responsibilities
+
+- `src/app.js` — bootstrap and render coordination; imports the active V14 Journey.
+- `src/data.js` — course normalization, stages, stable IDs and accepted speech-form registration.
+- `src/session.js` — adaptive review/new target selection and weak/due prioritization.
+- `src/learning-flow.js` — **V14 pedagogical experience planner**.
+- `src/journey-v14.js` — **active integrated Journey renderer and interaction engine**.
+- `src/practice.js` — focused listening, shadowing and fixed-target speaking.
+- `src/pronunciation-hi.js` — Japanese/Mandarin Hindi/Devanagari pronunciation support.
+- `src/learning.js` — event-derived learning evidence, review signals, mastery and XP feedback.
+- `src/event-db.js` — IndexedDB event persistence.
+- `src/store.js` — scoped local state and V14 activity-resume metadata.
+- `src/cloud.js` — optional auth/Supabase sync.
+- `src/audio.js` — TTS/voice selection.
+- `src/course.js` — supporting lesson notes, vocabulary, cards, quiz, writing and progress.
 - `src/home.js` — first-visit experience and returning dashboard.
-- `src/auth-ui.js` — sign-in, onboarding, Guest import, language management.
-- `src/writing.js` — touch/stylus/mouse writing pad.
-- `src/utils.js` — shared pure utilities.
+- `src/auth-ui.js` — optional account UX.
+- `src/writing.js` — writing pad.
+- `src/utils.js` — shared utilities and speech normalization/matching.
 
-Historical V7/V8/V9 files are course-content authoring layers, not a license to reintroduce runtime monkey-patching.
+`src/journey.js` and `src/resumable-journey.js` are historical V13 implementations and are not the active Journey in V14.
+
+V7/V8/V9 files remain course-content authoring layers. Do not reintroduce runtime monkey-patching through them.
+
+## Persistence guidance
+
+- IndexedDB remains the event ledger unless intentionally redesigned.
+- localStorage is for small scoped state, not an ever-growing event history.
+- V14 session resume currently preserves unit/activity continuity; exact old V13 item-step compatibility is not a release requirement.
+- Existing Supabase/account infrastructure may remain during the test phase but should not dictate pedagogy.
 
 ## Development workflow
 
-For each implementation task:
+For meaningful code changes:
 
-1. Understand the requested behavior and acceptance criteria.
-2. Inspect the affected implementation and related tests before editing.
-3. Check `TASKS.md` for protected behavior and current work.
-4. Make the smallest coherent change.
-5. Add or update tests for the regression being addressed.
-6. Run:
+1. Understand the learning outcome, not only the requested UI.
+2. Inspect the relevant curriculum data and runtime modules.
+3. Update the learning-flow contract before layering hacks into the UI.
+4. Add/update tests for the new behavior.
+5. Run:
    - `npm run ci`
-   - `npm run e2e` when browser/PWA behavior is affected.
-7. Check for console/runtime errors and mobile regressions.
-8. Update documentation when architecture, product behavior, schema, deployment, or limitations change.
-9. Update `CHANGELOG.md` for user-visible or architecture-significant releases.
-10. Update `TASKS.md` when a tracked item is completed or a new known issue is discovered.
-
-## Git workflow
-
-- `main` is production.
-- Prefer a feature/hotfix branch from current `main` for code changes.
-- Use pull requests and CI for non-trivial code changes.
-- Documentation-only maintenance may be committed directly when explicitly requested.
-- Never force-push `main`.
+   - `npm run e2e` for browser/PWA changes
+6. Check mobile layout and runtime console errors.
+7. Update `README.md`, `PRD.md`, `ARCHITECTURE.md`, `TASKS.md` and `CHANGELOG.md` when contracts change.
+8. Use a feature branch + pull request for non-trivial work.
+9. Never force-push `main`.
 
 ## Definition of done
 
-A task is complete only when:
+A learning-model change is complete when:
 
-- Requested behavior works.
-- Existing protected behavior still works.
-- Relevant tests pass.
-- No new browser/runtime error is introduced.
-- Offline behavior is checked when service-worker/runtime assets changed.
-- Data migration/sync implications are handled when persistence changed.
-- Documentation reflects any changed contract.
+- the requested learner behavior actually works
+- the flow is pedagogically coherent rather than merely visually complete
+- fixed-target vs open-response scoring semantics are honest
+- Japanese/Mandarin scaffolding remains correct where affected
+- required offline assets are cached
+- relevant tests pass
+- security/account isolation has not been accidentally weakened
+- documentation states the actual capability and remaining limitations
 
 ## When uncertain
 
-If the requested implementation conflicts with an existing contract, preserve the existing safe behavior and surface the conflict instead of silently deleting or rewriting functionality.
+Prefer the design that teaches the learner more effectively while remaining technically honest. During this test phase, do not let obsolete XP/progression/history assumptions block a better learning architecture.

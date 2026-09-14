@@ -1,117 +1,57 @@
-# Architecture — Language Lab Free V14 runtime / V15 migration foundation
+# Architecture — Language Lab Free V15.1
 
 ## 1. Overview
 
-Language Lab Free is a static, browser-based PWA hosted on GitHub Pages. V14 separates the **learning-flow planner** from the **Journey renderer** so curriculum content can be turned into connected learning experiences instead of a flat sequence of item screens.
+Language Lab Free is a static browser/PWA hosted on GitHub Pages. V15.1 separates four concerns that were historically closer together:
+
+1. course/content normalization
+2. adaptive target selection
+3. pedagogical activity ordering
+4. Journey rendering and interaction
 
 ```text
-Course content (V7/V8/V9 authoring layers)
+Course content (temporary V7/V8/V9 authoring layers)
         |
         v
 src/data.js
-  normalizes units, stages, targets and speech forms
-  caches immutable course/stage/target lookups
+  normalized units/stages/targets
+  stable IDs + accepted speech forms
         |
-        v
-src/learning-flow.js
-  builds one integrated unit experience
-        |
-        +--> mission
-        +--> dialogue / connected input
-        +--> adaptive review + new targets
-        +--> retrieval
-        +--> connected reading
-        +--> free-response scenario
-        +--> stage checkpoint
-        |
-        v
-src/journey-v14.js
-  renders and records the learner interaction
+        +------------------------------+
+        |                              |
+        v                              v
+src/session.js                   src/course-pack.js
+adaptive review/new              V15 schema/type registry
+selection                        legacy compiler/validator
+        |                              |
+        +---------------+--------------+
+                        v
+                src/learning-flow.js
+            assembles unit/context data
+                        |
+                        v
+                src/activity-engine.js
+           typed + interleaved activity plan
+                        |
+                        v
+                src/journey-v14.js
+          active renderer/interaction engine
+                        |
+                        v
+               learning-event evidence
+                 IndexedDB + optional
+                    Supabase sync
 ```
 
-The application continues to use ES modules, IndexedDB, localStorage, an offline service worker and optional Supabase account synchronization.
+The filename `journey-v14.js` remains during the migration because it is still the stable renderer. V15.1 does **not** create a parallel Journey runtime merely to change activity planning.
 
-### V15 migration seam
-
-V15 starts by separating authoring data from the learner runtime without introducing a second production Journey.
-
-```text
-existing V7/V8/V9 content
-        |
-        v
-src/data.js
-  existing normalization + stable target IDs
-        |
-        v
-src/course-pack.js
-  read-only legacy compiler
-  concepts + stages + units + typed activity templates
-        |
-        +--> validation
-        +--> migration tests
-        +--> optional generated JSON for inspection
-```
-
-`src/course-pack.js` is **not** loaded by the active browser runtime yet. V14 remains production while the new content contract is validated. This intentionally preserves current GitHub Pages/PWA behavior, learning-event identity, Guest/account isolation and offline startup.
-
-The V15 target architecture is:
-
-```text
-Course Pack
-   ↓
-Concept graph
-   ↓
-Deterministic curriculum / competency rules
-   ↓
-Adaptive planner
-   ↓
-Typed activity engine
-   ↓
-Journey / Practice / Review
-   ↓
-Learning-event evidence
-```
-
-Existing item/vocabulary IDs become V15 concept IDs unchanged during migration so historical IndexedDB/Supabase events continue to identify the same learning targets. AI, when added later, must operate inside validated course/activity contracts; it must not directly set mastery, complete units or redefine progression.
-
-## 2. V14 learning architecture
-
-### `src/learning-flow.js`
-
-This is the V14 pedagogical planning seam.
-
-It combines the current unit, stage information, adaptive target selection from `src/session.js`, V9/V14 dialogue and reading metadata, unit production tasks, stage checkpoints and script/character focus into one ordered `experience.activities` array.
-
-Activity types currently include:
-
-```text
-mission
- dialogue
- learn
- retrieve
- reading
- scenario
- checkpoint
- complete
-```
-
-Not every unit must contain every activity. Foundation courses can fall back to available item examples while Japanese and Mandarin can use their richer integrated content.
-
-### `src/journey-v14.js`
-
-The V14 Journey controller is the normal learner entry point. It renders the integrated activity list and handles mission/can-do orientation, model dialogue, target learning, active retrieval, same-session retry scheduling, connected reading, free-response production, stage checkpoints, speech-recognition capture, Journey/Review/Explore navigation and lightweight activity resume.
-
-Open production is deliberately **not** forced against one model sentence.
-
-### `src/session.js`
-
-The adaptive target-selection engine remains separate from the presentation flow. It decides the review/new mix and prioritizes weak/due targets. V14 then places those targets inside richer learning activities.
-
-V13-only helpers that no longer have a V14 caller are removed instead of being retained as compatibility code.
+## 2. Course/data layer
 
 ### `src/data.js`
 
-In addition to structural IDs and stage targeting, `src/data.js` owns the speech-authoring contract:
+`src/data.js` normalizes authored course content and owns the stable learning-target identity currently used by IndexedDB and Supabase events.
+
+It also owns the speech-authoring contract:
 
 ```text
 native
@@ -120,147 +60,208 @@ speechForms
 speechAliases
 ```
 
-Authored equivalent forms are registered for transcript matching. This is especially important for Japanese speech recognition, where a browser may return Kanji, Hiragana or Katakana for the same spoken form.
+Authored equivalents can therefore represent one spoken target using Japanese Kanji, Hiragana or Katakana without creating separate learning identities.
 
-Course data is treated as immutable after normalization. V14.0.1 therefore caches:
-
-- course lookup by code
-- available stages per course
-- target/item lookup per course
-- practice-target lists per course/skill/stage
-- conversation items per course/stage
-- all target IDs per course
-
-This avoids rebuilding the same arrays and scanning the same curriculum on every render.
+Normalized course data is treated as immutable after normalization and cached for course/stage/item/practice/conversation lookup.
 
 ### `src/course-pack.js`
 
-This is the V15 content-contract seam during migration.
+The Course Pack layer introduced in V15.0 provides:
 
-It currently provides:
+- schema version `15.0`
+- concept types
+- canonical typed activity names
+- conversion from the normalized legacy course model
+- stable target-ID preservation
+- dialogue/reading/production/checkpoint conversion
+- structural validation
 
-- Course Pack schema version `15.0`
-- concept types and typed activity names
-- conversion of normalized V14 courses into Course Packs
-- preservation of existing target IDs and accepted speech forms
-- conversion of V9/V14 dialogue, reading, production, script focus and stage checkpoints
-- validation for duplicate IDs, unknown types and broken references
+The Course Pack compiler remains read-only. Existing item/vocabulary IDs become concept IDs unchanged during migration so historical learning events continue to resolve.
 
-The compiler is read-only. It must not mutate normalized V14 course objects. `scripts/build-course-packs.js` compiles Japanese and Mandarin by default and can compile all courses for migration inspection.
+Native authored Course Packs are **not yet** the browser content source of truth. V7/V8/V9 remain temporary authoring layers until parity and runtime cutover are proven.
 
-## 3. Runtime module map
+## 3. Adaptive selection vs pedagogical ordering
 
-- `src/app.js` — bootstrap and render coordination; imports V14 Journey.
-- `src/store.js` — scoped preferences/UI state, positions, in-memory event view and event-revision invalidation.
-- `src/event-db.js` — IndexedDB learning-event persistence.
-- `src/cloud.js` — authentication and optional Supabase synchronization.
-- `src/learning.js` — indexed event-derived XP, mastery, coverage, streak and review signals.
-- `src/data.js` — course normalization, stages, stable target IDs, speech forms and immutable lookup caches.
-- `src/session.js` — adaptive review/new target planner.
-- `src/learning-flow.js` — V14 integrated unit-experience planner.
-- `src/journey-v14.js` — V14 connected Journey UI and interaction engine.
-- `src/practice.js` — focused listening/speaking practice using authored accepted speech forms.
-- `src/pronunciation-hi.js` — Japanese/Mandarin Hindi pronunciation helper.
-- `src/audio.js` — browser TTS and voice selection.
-- `src/course.js` — detailed lesson notes, vocabulary, writing, cards and progress.
-- `src/home.js` — first-visit course selection and returning dashboard.
-- `src/auth-ui.js` — optional account UX.
-- `src/writing.js` — touch/stylus/mouse writing pad.
-- `src/utils.js` — shared utilities, speech normalization and matching.
-- `src/course-pack.js` — V15 migration/compiler contract; not yet part of active browser rendering.
+### `src/session.js` — selection
 
-Historical V13 Journey/resume modules, V13 Journey CSS and the V10 compatibility runtime were removed in V14.0.1. Git history is the archive; they are not maintained as parallel implementations.
+The adaptive selector decides **which targets** enter a session.
 
-## 4. Learning evidence and event indexing
+Current target mix:
 
-Learner actions still use the existing event pipeline:
+- first steps: 0 review + 3 new
+- recent accuracy <60%: 4 review + 1 new
+- 60–79%: 3 review + 2 new
+- 80%+: 2 review + 3 new
+
+Weak/due material receives higher review priority.
+
+`src/session.js` does not decide the final screen sequence.
+
+### `src/activity-engine.js` — ordering
+
+V15.1 introduces the active typed activity planner.
+
+Each activity has:
+
+```js
+{
+  activityType, // canonical V15 identity
+  type,         // temporary V14 renderer alias
+  key,
+  ...payload
+}
+```
+
+Examples:
+
+```text
+canonical          renderer alias
+---------          --------------
+mission            mission
+model-dialogue     dialogue
+concept-intro      learn
+fixed-retrieval    retrieve
+reading            reading
+free-speaking      scenario
+checkpoint         checkpoint
+complete           complete
+```
+
+The alias is temporary migration infrastructure. New pedagogical behavior should be expressed through canonical activity types rather than by inventing new UI-specific screen names.
+
+## 4. Interleaving contract
+
+The old V14 planner paired every target as:
+
+```text
+Learn A
+Retrieve A
+Learn B
+Retrieve B
+```
+
+V15.1 changes that contract.
+
+### New targets
+
+A new target is introduced and, when another meaningful activity is available, retrieval is delayed by at least one intervening activity.
+
+Typical first session:
+
+```text
+Mission
+Dialogue
+Introduce A
+Introduce B
+Retrieve A
+Introduce C
+Retrieve B
+Reading / context where available
+Retrieve C
+Scenario
+```
+
+The exact order depends on the adaptive review/new queue and authored connected content.
+
+### Review targets
+
+Previously seen review material is retrieved **before re-teaching**. The planner does not automatically reveal a review target immediately before testing it.
+
+A review activity may also act as the intervening activity that spaces retrieval of a newly introduced target.
+
+### Single-target limitation
+
+If a session contains only one usable new target and there is no legitimate intervening activity, the retrieval is marked:
+
+```js
+{ spacingLimited: true }
+```
+
+The validator permits that explicit exception. The system does not create meaningless filler merely to satisfy a spacing metric.
+
+### Wrong-answer retry
+
+The existing Journey interaction engine can insert an incorrect retrieval again later in the same session. This remains separate from the first-retrieval interleaving rule.
+
+## 5. `src/learning-flow.js`
+
+`src/learning-flow.js` is now primarily an **experience assembler**, not the owner of target-screen ordering.
+
+It gathers:
+
+- current unit and stage
+- selected adaptive targets
+- model dialogue or fallback connected input
+- connected reading
+- production goal
+- stage checkpoint
+- concept map metadata
+
+Then it delegates ordering to:
+
+```js
+buildInterleavedActivityPlan(...)
+```
+
+and validates the result with:
+
+```js
+assertInterleavedActivityPlan(...)
+```
+
+This keeps pedagogy testable without DOM/browser rendering.
+
+## 6. `src/journey-v14.js`
+
+The existing Journey remains the active renderer and interaction controller during the V15 migration.
+
+It currently handles:
+
+- Mission/can-do orientation
+- model dialogue playback
+- target introduction
+- retrieval options
+- fixed-target speaking
+- connected reading
+- free-response production
+- stage checkpoints
+- same-session retry insertion
+- session resume metadata
+- Review/Explore navigation
+
+Open production remains deliberately unscored against one arbitrary model sentence.
+
+Future work can progressively render canonical types such as cloze, listening checks or word-bank activities directly, after which the temporary renderer aliases can be reduced and eventually removed.
+
+## 7. Learning evidence pipeline
+
+Learner evidence continues through the existing event pipeline:
 
 ```text
 learner action
   -> recordPractice()
   -> store.js event revision changes
   -> IndexedDB persistence
-  -> learning.js rebuilds its derived index once
-  -> subsequent target/unit/review calculations reuse that index
+  -> learning.js rebuilds derived index once
+  -> mastery/review/progress reuse that index
   -> optional incremental Supabase sync
 ```
 
-`src/store.js` exposes an event revision that changes only when the learning-event view is loaded/replaced or semantically changes. Unrelated UI/preference normalization preserves the existing event array instead of copying it.
+V15.1 changes activity sequencing; it does not change historical target IDs, account ownership, IndexedDB schema or Supabase schema.
 
-`src/learning.js` uses the revision to cache:
+Important evidence semantics remain:
 
-- latest reset cutoff per language
-- activity events per language
-- practice history per language + target + skill
-- scored practice history per language + target + skill
-- mastery values for the current revision
+- retrieval answer: may be assessed
+- fixed-target speech: may use accepted-form transcript-match evidence
+- open scenario response: unscored production evidence
+- connected reading reveal: practice evidence, not fabricated comprehension accuracy
+- stage self-assessment: unscored checkpoint evidence
 
-Before V14.0.1, functions such as mastery, skill statistics, unit mastery and review selection could repeatedly filter/sort the complete event history. The indexed design makes those calls operate on the relevant small history instead.
+XP is feedback, not the curriculum architecture.
 
-## 5. Learning-flow data contract
+## 8. Japanese and Mandarin scaffolding
 
-An integrated experience contains:
-
-```js
-{
-  courseId,
-  unitIndex,
-  unit,
-  stage,
-  canDo,
-  targets,
-  dialogue,
-  reading,
-  production,
-  checkpoint,
-  concepts,
-  activities,
-  mix
-}
-```
-
-A selected learning target includes:
-
-```js
-{
-  id,
-  native,
-  kanjiForm,
-  roman,
-  meaning,
-  speechForms,
-  guide,
-  kind
-}
-```
-
-This lets one target participate in listening, retrieval, speech and script presentation without duplicating identity.
-
-The V15 Course Pack model generalizes this identity into a `concept`, which can later participate across recognition, recall, listening, speaking, reading and writing without creating a second target ID for each surface representation.
-
-## 6. Fixed-target speech vs open production
-
-### Fixed-target speech
-
-When the learner is asked to say a specific target, browser transcripts are compared against the target's accepted authored forms using `bestSpeechMatch()`.
-
-This can support cases such as:
-
-```text
-犬 == いぬ == イヌ
-```
-
-when those forms are authored as equivalents.
-
-### Open free response
-
-When a task allows many natural answers, the browser may capture the transcript but the app does not generate a fake percentage against one sample answer.
-
-This protects the product from presenting text similarity as semantic conversation ability.
-
-## 7. Japanese and Mandarin scaffolding
-
-Japanese and Mandarin can display multiple learner aids from the same target:
+Japanese and Mandarin can expose multiple representations of one target:
 
 ```text
 script form
@@ -270,50 +271,70 @@ Hindi/Devanagari pronunciation
 meaning
 ```
 
-`shouldShowRoman()` controls gradual Romaji/Pinyin fade. Hindi pronunciation can remain visible independently. For Mandarin, the Hindi helper preserves tone-number guidance. Audio remains the pronunciation authority.
+`shouldShowRoman()` controls gradual Romaji/Pinyin fade. Hindi pronunciation can remain visible independently. Audio remains the pronunciation authority.
 
-## 8. Learning-evidence semantics
-
-Important distinctions remain:
-
-- retrieval answer: may be assessed
-- fixed-target speech: may use transcript-match score
-- open scenario response: unscored production evidence
-- connected reading reveal: practice evidence, not fabricated comprehension accuracy
-- stage self-assessment: unscored checkpoint evidence
-
-XP is not the curriculum architecture and does not determine V14 lesson structure.
-
-## 9. Test-phase progression
-
-During V14 testing, all units are directly accessible. The Journey still recommends the first unit lacking sufficient evidence, but testers can open later Japanese/Mandarin stages without manufacturing progress history.
-
-This is intentional while curriculum depth and advanced interactions are still being validated.
-
-## 10. Persistence
+## 9. Persistence and resume
 
 ### Local
 
-- localStorage: small scoped UI/preferences and V14 activity-resume metadata
+- localStorage: small scoped UI/preferences + Journey activity-resume metadata
 - IndexedDB: learning-event history
-
-Only the active IndexedDB operations remain in `src/event-db.js`: load and upsert. Unused delete/count helpers were removed.
 
 ### Cloud
 
-Optional Supabase services remain available for account testing:
+Optional Supabase tables remain:
 
 - `profiles`
 - `learning_events`
 - `course_positions`
 
-The V15 Course Pack foundation does not require new database tables or schema changes.
+No V15.1 database migration is required.
 
-## 11. Offline/PWA
+Journey resume still stores unit/activity continuity rather than serializing a second full course/runtime state.
 
-`sw.js` cache version `language-lab-free-v14-0-1` includes the V14 Journey, learning-flow, session, pronunciation and runtime modules plus the pinned Supabase browser runtime.
+## 10. Offline/PWA
 
-`src/course-pack.js` is not an active browser dependency yet, so this migration foundation intentionally does not change the service-worker asset list or cache version.
+The service-worker cache is:
+
+```text
+language-lab-free-v15-1
+```
+
+The cached runtime includes:
+
+- `src/course-pack.js`
+- `src/activity-engine.js`
+- `src/learning-flow.js`
+- `src/session.js`
+- `src/journey-v14.js`
+- pronunciation and other required browser modules
+- pinned Supabase browser runtime
+
+This is necessary because the active planner imports the canonical activity registry from `course-pack.js`.
+
+## 11. Runtime module map
+
+- `src/app.js` — bootstrap/render coordination; runtime version `15.1.0`
+- `src/store.js` — scoped UI/preferences and event-revision invalidation
+- `src/event-db.js` — IndexedDB event persistence
+- `src/cloud.js` — optional auth/Supabase sync
+- `src/learning.js` — indexed learning evidence, review signals, mastery and XP
+- `src/data.js` — course normalization and stable target data
+- `src/session.js` — adaptive target selection
+- `src/course-pack.js` — V15 schema/compiler/canonical type registry
+- `src/activity-engine.js` — V15.1 typed/interleaved ordering
+- `src/learning-flow.js` — integrated experience assembly
+- `src/journey-v14.js` — active Journey renderer during migration
+- `src/practice.js` — focused listening/speaking
+- `src/pronunciation-hi.js` — Japanese/Mandarin Hindi pronunciation helper
+- `src/audio.js` — browser TTS/voice selection
+- `src/course.js` — notes/vocabulary/writing/cards/progress
+- `src/home.js` — home/course selection/dashboard
+- `src/auth-ui.js` — optional account UX
+- `src/writing.js` — writing pad
+- `src/utils.js` — shared helpers and speech matching
+
+Historical superseded runtime implementations remain in Git history, not the active tree.
 
 ## 12. Testing
 
@@ -323,6 +344,17 @@ npm run e2e
 npm run course-packs:check
 ```
 
-`tests/course-pack.test.js` additionally verifies Japanese/Mandarin V15 compilation, stable target identity, authored connected content, checkpoint preservation, compiler immutability and validation failures for broken references.
+Coverage includes:
 
-Browser coverage remains intended to exercise visitor vs returning learner state, honest course-depth messaging, mission -> dialogue -> target -> retrieval flow, retry signaling, accepted speech forms, Hindi pronunciation scaffolding, account/Guest infrastructure, IndexedDB persistence and PWA offline startup.
+- canonical activity typing
+- delayed/interleaved retrieval for normal multi-target sessions
+- review-before-reteach ordering
+- explicit single-target `spacingLimited` behavior
+- wrong-answer retry
+- stable Course Pack identity and validation
+- Journey resume
+- fixed vs open speech semantics
+- Japanese/Mandarin pronunciation scaffolding
+- account/Guest isolation
+- IndexedDB persistence
+- offline PWA startup

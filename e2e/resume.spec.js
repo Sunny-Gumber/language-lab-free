@@ -1,25 +1,21 @@
 import{test,expect}from'@playwright/test';
-import{blockExternal}from'./helpers.js';
+import{advanceJourneyUntil,blockExternal}from'./helpers.js';
 
 async function waitForBoot(page){
-  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('14.0.1');
+  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('15.1.0');
   await expect(page.locator('.fatal-error')).toHaveCount(0);
 }
 
 async function reachRetrieve(page){
   await page.locator('[data-language="ja"]').click();
   await page.locator('[data-journey-start]').first().click();
-  await page.locator('[data-flow-action="continue"]').click();
-  if(await page.locator('.dialogue-v14').count())await page.locator('[data-flow-action="continue"]').click();
-  await expect(page.locator('.flow-card-v14.target')).toBeVisible();
-  await page.locator('[data-flow-action="continue"]').click();
-  await expect(page.locator('.flow-card-v14.retrieve')).toBeVisible();
+  await advanceJourneyUntil(page,'.flow-card-v14.retrieve');
   return(await page.locator('.flow-card-v14.retrieve h2').textContent())?.trim();
 }
 
 test.beforeEach(async({page})=>{await blockExternal(page)});
 
-test('Home Continue restores the paused V14 activity after reload',async({page})=>{
+test('Home Continue restores the paused interleaved activity after reload',async({page})=>{
   await page.goto('/');await waitForBoot(page);
   const pausedMeaning=await reachRetrieve(page);
   await page.locator('[data-retrieve-answer]').first().click();
@@ -34,7 +30,7 @@ test('Home Continue restores the paused V14 activity after reload',async({page})
   await expect(page.locator('.flow-card-v14.retrieve h2')).toHaveText(pausedMeaning);
 });
 
-test('saved V14 session presents a resume action when course is reopened',async({page},testInfo)=>{
+test('saved Journey session presents a resume action when course is reopened',async({page},testInfo)=>{
   test.skip(testInfo.project.name!=='desktop-chromium','Resume-path behavior is exercised once on desktop Chromium.');
   await page.goto('/');await waitForBoot(page);
   await reachRetrieve(page);

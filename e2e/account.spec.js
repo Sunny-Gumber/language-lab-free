@@ -1,18 +1,15 @@
 import{test,expect}from'@playwright/test';
-import{blockExternal,installMockSupabase}from'./helpers.js';
+import{advanceJourneyUntil,blockExternal,installMockSupabase}from'./helpers.js';
 
 async function waitForBoot(page){
-  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('14.0.1');
+  await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('15.1.0');
   await expect(page.locator('.fatal-error')).toHaveCount(0);
 }
 async function createGuidedGuestProgress(page){
   await page.locator('[data-language="ja"]').click();
   await expect(page.locator('#journeyTab')).toHaveClass(/active/);
   await page.locator('[data-journey-start]').first().click();
-  await page.locator('[data-flow-action="continue"]').click();
-  if(await page.locator('.dialogue-v14').count())await page.locator('[data-flow-action="continue"]').click();
-  await expect(page.locator('.flow-card-v14.target')).toBeVisible();
-  await page.locator('[data-flow-action="continue"]').click();
+  await advanceJourneyUntil(page,'.flow-card-v14.retrieve');
   await page.locator('[data-retrieve-answer]').first().click();
   await expect.poll(()=>page.evaluate(()=>window.LanguageLab.getState().events.filter(event=>event.activity==='practice').length)).toBeGreaterThanOrEqual(1);
 }
@@ -44,7 +41,7 @@ test('signed-in onboarding, language management and sign-out work end to end',as
   await expect(page.locator('#syncStatus')).toContainText('Guest');
 });
 
-test('guest V14 progress can be imported into a newly signed-in account',async({page},testInfo)=>{
+test('guest interleaved Journey progress can be imported into a newly signed-in account',async({page},testInfo)=>{
   test.skip(testInfo.project.name!=='desktop-chromium','Guest import contract is exercised once on desktop Chromium.');
   await blockExternal(page);await installMockSupabase(page,{signedIn:false});
   page.on('dialog',dialog=>dialog.accept());

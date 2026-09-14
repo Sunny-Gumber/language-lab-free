@@ -1,9 +1,9 @@
 {
   "name": "language-lab-free",
   "private": true,
-  "version": "14.0.1",
+  "version": "15.1.0",
   "type": "module",
-  "description": "Guided adaptive language-learning platform with connected input, retrieval, free response, deepening Japanese/Mandarin paths and eight foundation courses",
+  "description": "Guided adaptive language-learning platform with connected input, interleaved retrieval, free response, deepening Japanese/Mandarin paths and eight foundation courses",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "check": "node scripts/check-syntax.js",

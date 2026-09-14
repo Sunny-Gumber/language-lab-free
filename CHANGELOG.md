@@ -2,12 +2,42 @@
 
 All notable product and architecture changes should be recorded here.
 
-## Unreleased — V15 Course Pack foundation
+## 15.1.0 — 2026-09-14
+
+### Typed/interleaved learning planner
+
+- Added `src/activity-engine.js` as the active pedagogical ordering layer between adaptive target selection and Journey rendering.
+- Planned activities now retain canonical V15 `activityType` identities while temporarily mapping to the existing `src/journey-v14.js` renderer aliases.
+- Previously seen review targets are retrieved before re-teaching rather than being revealed immediately before testing.
+- New targets are introduced and then retrieved after at least one intervening activity whenever the session contains enough meaningful material.
+- Single-target sessions explicitly mark an unavoidable immediate retrieval as `spacingLimited` instead of inventing filler content.
+- `src/learning-flow.js` now assembles unit/context data and delegates activity ordering to the typed planner.
+- Wrong retrieval can still schedule a later same-session retry.
+
+### Learner experience
+
+- Journey now explains that new language will be retrieved after a short delay rather than promising immediate retrieval.
+- Session preview identifies interleaved retrieval.
+- Completion copy reflects spaced retrieval while keeping open free-response assessment honest.
+- Existing Japanese/Mandarin Romaji/Pinyin and Hindi/Devanagari pronunciation scaffolding is preserved.
+
+### Testing and PWA
+
+- Added unit tests for delayed new-target retrieval, review-before-reteach behavior, canonical typed activities and single-target spacing limits.
+- Browser tests now advance by expected learner state/selector instead of depending on a fixed number of Journey screens.
+- Runtime/package version moved to `15.1.0`.
+- Service-worker cache moved to `language-lab-free-v15-1`.
+- Offline assets now include `src/course-pack.js` and `src/activity-engine.js` because the active planner uses the V15 canonical type registry.
+- No IndexedDB or Supabase schema change is required.
+
+## V15 Course Pack foundation — merged 2026-09-14
+
+This architecture-only foundation was merged before the learner-facing `15.1.0` version bump.
 
 ### Content architecture
 
 - Added `src/course-pack.js` with a versioned `15.0` Course Pack contract covering courses, stages, concepts, units and typed activity templates.
-- Added a read-only legacy compiler that consumes the existing normalized V14 course model rather than duplicating stable-ID normalization.
+- Added a read-only legacy compiler that consumes the existing normalized course model rather than duplicating stable-ID normalization.
 - Existing item/vocabulary target IDs are preserved as concept IDs so historical learning events remain attached to the same learning identity.
 - Authored speech forms, V9/V14 dialogue, connected reading, production tasks, script focus and stage checkpoints are carried into compiled packs.
 - Added validation for duplicate IDs, unknown concept/activity types, invalid stage references and broken activity/unit concept references.
@@ -22,127 +52,80 @@ All notable product and architecture changes should be recorded here.
 
 ### Runtime impact
 
-- No production Journey/runtime cutover is included in this foundation change.
-- V14 remains the active browser runtime, so service-worker assets, IndexedDB event semantics, Guest/account behavior and offline startup are intentionally unchanged.
-- V7/V8/V9 remain temporary authoring sources during parity work; the target is to remove them after a later Course Pack runtime cutover rather than maintain permanent parallel systems.
+- The foundation itself did not switch course loading or Journey rendering.
+- V7/V8/V9 remain temporary authoring sources during parity work; the target is to remove them after native Course Pack/runtime cutover rather than maintain permanent dual systems.
 
 ## 14.0.1 — 2026-08-30
 
 ### Runtime reliability and load reduction
 
-- Audited the V14 runtime for dead, duplicated and repeatedly recomputed work.
+- Audited the active runtime for dead, duplicated and repeatedly recomputed work.
 - Added event-revision invalidation in `src/store.js` and an indexed learning-event view in `src/learning.js`.
-- Learning evidence is now grouped once per revision by language/activity and language/target/skill instead of repeatedly filtering and sorting the complete event history for mastery, review and progress calculations.
+- Learning evidence is grouped once per revision by language/activity and language/target/skill rather than repeatedly filtering/sorting full history.
 - Mastery values are cached for the current event revision.
-- Unrelated UI/preference state updates preserve the existing event array instead of copying it through every normalization pass.
-- Added immutable lookup caches in `src/data.js` for courses, stages, items, practice targets, target IDs and conversation items.
-- Removed V13-only adaptive-session helpers that no longer had a V14 caller.
-- Removed unused IndexedDB delete/count helpers.
-- Removed redundant Journey position restoration and duplicate post-cloud initialization renders.
+- Unrelated UI/preference state updates preserve the existing event array.
+- Added immutable lookup caches in `src/data.js`.
+- Removed V13-only adaptive helpers with no active caller and unused IndexedDB helpers.
+- Removed redundant Journey restoration and duplicate post-cloud boot renders.
 
 ### Legacy cleanup
 
-- Removed obsolete `src/journey.js` and `src/resumable-journey.js` V13 implementations from the active tree.
-- Removed obsolete `journey-v13.css`.
-- Removed the unused V10 compatibility runtime `v10-hardening.js`.
-- Git history remains the source for historical implementations instead of keeping parallel runtime files in the current codebase.
-- Added explicit code-hygiene rules to `AGENTS.md` to prevent dead parallel implementations and repeated hot-path event scans from returning.
+- Removed obsolete V13 Journey/resume modules and CSS plus the unused V10 compatibility runtime.
+- Git history remains the archive instead of keeping parallel inactive runtime implementations.
 
 ### PWA
 
-- Bumped the offline cache to `language-lab-free-v14-0-1` so installed clients refresh the cleaned V14 runtime.
+- Bumped the offline cache to `language-lab-free-v14-0-1`.
 
 ## 14.0.0 — 2026-08-30
 
 ### Integrated learning-flow rewrite
 
-- Replaced the V13 seven-screen item loop as the normal Journey with a V14 integrated unit experience.
-- Added `src/learning-flow.js` as the pedagogical planning seam between course content, adaptive target selection and the Journey renderer.
-- Added `src/journey-v14.js` and `journey-v14.css` as the active guided learning experience.
-- V14 sessions can combine Mission → model dialogue → target learning → active retrieval → connected reading → free-response production → stage checkpoint → completion.
-- Existing adaptive review/new selection remains in use, but selected targets are now embedded in connected activities instead of presented only as isolated cards.
-- Wrong retrieval can schedule the target to return later in the same session.
-- All units are directly accessible during the current test phase so later Japanese/Mandarin stages can be evaluated without manufacturing progress history.
+- Replaced the V13 item loop with a connected unit experience.
+- Added `src/learning-flow.js` as the pedagogical planning seam and `src/journey-v14.js` as the active guided renderer.
+- Sessions can combine Mission → model dialogue → target learning → retrieval → connected reading → free-response production → checkpoint → completion.
+- Adaptive review/new selection remains in use inside the richer flow.
+- Wrong retrieval can return later in the same session.
+- All units are directly accessible during the test phase.
 
 ### Conversation and production
 
-- Added connected multi-turn model dialogue to the Journey when authored V9/V14 dialogue is available.
-- Added connected reading when authored unit reading exists.
-- Added open free-response scenarios based on unit production goals.
-- Free responses are deliberately **not** assigned a fake percentage against one sample answer; the browser may capture what it heard as unscored production evidence.
-- Fixed-target speech remains scoreable through transcript matching because the target has an explicit accepted-form set.
+- Added connected model dialogue and reading where authored.
+- Added open free-response scenarios that are deliberately not fake-scored against one sample answer.
+- Fixed-target speech can use authored accepted forms for transcript matching.
 
 ### Japanese and Mandarin scaffolding
 
-- Kept Romaji/Pinyin scaffolding fade behavior in the new Journey.
-- Kept Hindi/Devanagari pronunciation guidance visible independently for Japanese and Mandarin.
-- Practice and V14 fixed-target speech now use authored `kanjiForm`, `speechForms` and `speechAliases` through `bestSpeechMatch()`.
-- Preserved Japanese Kanji/Hiragana/Katakana equivalence for authored spoken targets.
+- Preserved Romaji/Pinyin fade behavior and Hindi/Devanagari pronunciation guidance.
+- Added data-driven `kanjiForm`, `speechForms` and `speechAliases` handling.
+- Preserved Japanese Kanji/Hiragana/Katakana transcript equivalence.
 
 ### Product positioning
 
-- Product wording is now explicitly: **“A guided adaptive language-learning platform with deepening Japanese and Mandarin paths and foundation courses for eight additional languages.”**
-- Japanese/Mandarin remain the reference courses for deeper curriculum development.
-- The other eight languages remain honestly labelled as foundation courses.
-- Internal `advanced` stage labels do not claim JLPT/HSK/certification equivalence.
-
-### Runtime and PWA
-
-- Application version moved to `14.0.0` / `window.LanguageLab.version = 14.0`.
-- PWA cache moved to `language-lab-free-v14-0` and now includes `journey-v14.css`, `src/journey-v14.js` and `src/learning-flow.js`.
-- Existing Guest/account/IndexedDB/Supabase infrastructure remains available around the rewritten learning experience.
-
-## Unreleased / V13.1 follow-up fixes
-
-- Japanese browser speech matching treats common Kanji, Hiragana and Katakana renderings of the same spoken target as equivalent, preventing false 0% results such as browser-heard `犬` versus lesson target `いぬ`.
-- Added a data-driven speech-form contract: authored `kanjiForm`, `speechForms`, and `speechAliases` values are normalized and registered as accepted transcript equivalents.
-- Practice targets carry normalized speech-form metadata.
-- Transcript matching remains text-recognition evidence only; it does not claim phoneme-level accent, pitch-accent or Mandarin tone grading.
+- Product wording became: **“A guided adaptive language-learning platform with deepening Japanese and Mandarin paths and foundation courses for eight additional languages.”**
+- Internal advanced-stage labels do not claim JLPT/HSK/certification equivalence.
 
 ## 13.1.0 — 2026-08-29
 
-### Adaptive communicative Journey
-
-- Introduced a progressive Journey centered on Context -> Listen -> Understand -> Check -> Recall -> Use -> Complete.
-- Added adaptive old/new session mixing based on recent scored accuracy.
-- Prioritized weak and due targets for review.
-- Added recall and speaking/use steps.
-- Added mistake memory and same-session retry behavior.
-- Added language-specific scaffolding and curriculum ordering.
-- Strengthened stable structural learning target IDs.
-
-### Pronunciation support
-
-- Added learner-friendly Hindi/Devanagari pronunciation guidance for Japanese and Mandarin while retaining Romaji/Pinyin.
-- Added Mandarin tone guidance.
-- Included browser and offline/PWA coverage for the pronunciation layer.
-
-### Journey resume hardening
-
-- Persisted the exact V13 guided Journey session/item/step.
-- Added clearer labels for cross-unit review items.
-- Preserved resume support offline.
+- Introduced the adaptive communicative Journey around Context → Listen → Understand → Check → Recall → Use → Complete.
+- Added weak/due prioritization, recall/speaking, mistake memory and same-session retry.
+- Added Japanese/Mandarin Hindi pronunciation guidance and Mandarin tone guidance.
+- Hardened Journey resume behavior.
 
 ## 12.0.0 — 2026-08-29
 
-- Added separate new-visitor and returning-learner home states.
-- Added a listening demo, honest course-depth information and no-account-required start path.
-- Added a returning learner dashboard with Continue Learning, practice and progress information.
+- Added separate first-visitor and returning-learner home states.
+- Added honest course-depth messaging and a returning learner dashboard.
 
 ## 11.2.0 — 2026-08-29
 
 - Moved learning-event persistence to IndexedDB.
-- Hardened account/Guest-scoped local state and Guest-to-account import.
-- Implemented incremental learning-event synchronization and conflict-safe position/preference synchronization.
-- Added stable target IDs and stage-aware practice data.
-- Pinned and cached the Supabase browser runtime for offline startup.
-- Added service-worker/offline PWA regression testing.
+- Hardened Guest/account scoping and Guest-to-account import.
+- Added incremental event sync, course-position conflict handling, stable target IDs and PWA regression testing.
 
 ## 11.0.0 — 2026-08-28
 
-- Replaced the historical layered runtime with a cleaner ES-module architecture.
-- Moved learning state toward an event-derived model.
-- Added course-position synchronization and stronger mobile/browser regression coverage.
+- Replaced the historical layered runtime with browser ES modules and moved learning state toward an event-derived model.
 
 ## 10.0.0 — 2026-08-27
 
@@ -150,11 +133,11 @@ All notable product and architecture changes should be recorded here.
 
 ## 9.0.0 — 2026-08-27
 
-- Added deeper integrated Japanese and Mandarin lesson packs and richer lesson/checkpoint content.
+- Added deeper integrated Japanese/Mandarin lesson packs and richer checkpoint content.
 
 ## 8.0.0 — 2026-08-27
 
-- Added expanded Japanese and Mandarin multi-stage curricula and multi-skill mastery support.
+- Added expanded Japanese/Mandarin multi-stage curricula and multi-skill mastery support.
 
 ## 7.0.0 — 2026-08-27
 

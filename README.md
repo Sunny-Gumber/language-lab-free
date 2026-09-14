@@ -2,7 +2,7 @@
 
 **A guided adaptive language-learning platform with deepening Japanese and Mandarin paths and foundation courses for eight additional languages.**
 
-Language Lab Free is a free, mobile-first browser/PWA learning project hosted on GitHub Pages. Guest learning works without an account; optional sign-in can synchronize supported data through Supabase.
+Language Lab Free is a free, mobile-first browser/PWA project hosted on GitHub Pages. Guest learning works without an account; optional sign-in can synchronize supported data through Supabase.
 
 ## Languages and current depth
 
@@ -10,8 +10,6 @@ Language Lab Free is a free, mobile-first browser/PWA learning project hosted on
 
 - 🇯🇵 Japanese
 - 🇨🇳 Mandarin Chinese
-
-These two courses contain the deepest staged curriculum and are where the zero-to-advanced learning model is being developed and tested.
 
 **Foundation courses**
 
@@ -24,59 +22,72 @@ These two courses contain the deepest staged curriculum and are where the zero-t
 - Arabic
 - Portuguese
 
-The eight foundation courses use the same learning engine but should not yet be described as equally deep.
+Japanese and Mandarin are the reference courses for deeper curriculum design. The other eight languages use the same learning platform but should not yet be described as equally deep.
 
-## V14 — integrated learning flow
+## V15.1 — typed, interleaved Journey planning
 
-V14 changes the normal Journey from a sequence of isolated item screens into a connected unit experience.
+V15.1 keeps the connected Journey introduced in V14, but removes the old assumption that every newly shown target should be tested immediately on the very next screen.
 
 ```text
 Mission / can-do goal
-      ↓
+        ↓
 Model conversation / connected input
-      ↓
-Learn useful forms
-      ↓
-Retrieve from memory
-      ↓
+        ↓
+Adaptive target selection
+        ↓
+┌──────────────────────────────────────┐
+│ Review target → retrieve first       │
+│ New target → introduce              │
+│              → another activity      │
+│              → retrieve from memory  │
+└──────────────────────────────────────┘
+        ↓
 Connected reading when available
-      ↓
+        ↓
 Free-response scenario
-      ↓
+        ↓
 Stage checkpoint when applicable
-      ↓
-Weak material returns later
+        ↓
+Weak material can return again
 ```
 
-### Why this changed
+The aim is simple: **retrieval should require memory, not immediate copying**.
 
-Finishing flashcards is not the same as learning a language. V14 tries to connect vocabulary, grammar, script, listening, reading and production around situations the learner can actually use.
+For normal multi-target sessions, a new target is separated from its first retrieval by at least one other learning activity. If a session genuinely contains only one usable target and no meaningful intervening activity exists, the planner marks that retrieval as `spacingLimited` rather than manufacturing filler content.
 
-A selected target may therefore appear several ways:
+Previously seen review targets are different: the learner is asked to retrieve them before being re-taught. Wrong retrieval can still schedule a same-session retry.
+
+## Typed activity planning
+
+`src/activity-engine.js` is now the active planning seam between adaptive target selection and the existing Journey renderer.
+
+Every planned step carries a canonical V15 activity type, for example:
 
 ```text
-sound
-  ↕
-script / Kanji / Hanzi
-  ↕
-reading / Romaji / Pinyin
-  ↕
-meaning
-  ↕
-grammar or usage
-  ↕
-dialogue
-  ↕
+mission
+model-dialogue
+concept-intro
+fixed-retrieval
 reading
-  ↕
-retrieval
-  ↕
-free response
+free-speaking
+checkpoint
+complete
 ```
 
-## V15 migration foundation — Course Packs
+During migration, the same activity also carries a temporary renderer alias understood by `src/journey-v14.js`:
 
-V15 starts by separating **course authoring data** from the learner runtime. The active learner experience remains V14 while the new content contract is validated.
+```text
+concept-intro    → learn
+fixed-retrieval  → retrieve
+model-dialogue   → dialogue
+free-speaking    → scenario
+```
+
+This keeps one working Journey while the data/planning model evolves. It avoids creating a second parallel `journey-v15.js` runtime just to change pedagogy.
+
+## V15 Course Pack foundation
+
+V15 also separates **course authoring data** from runtime implementation through the Course Pack contract introduced in the previous foundation step.
 
 ```text
 Existing V7/V8/V9 content
@@ -92,28 +103,28 @@ Course Pack
   └─ typed activity templates
 ```
 
-The migration compiler deliberately reuses existing V14 normalization so stable target IDs and authored speech-form equivalence are preserved. Existing item/vocabulary IDs become V15 concept IDs rather than creating a second learning identity.
+The migration compiler deliberately reuses existing normalization so stable target IDs and authored speech-form equivalence are preserved. Existing item/vocabulary IDs become V15 concept IDs instead of creating a second learning identity.
 
-Japanese and Mandarin are the first reference packs. Generated JSON is currently a migration/debug artifact; it is **not** the active runtime source of truth yet.
+Japanese and Mandarin are the first reference packs. Generated Course Pack JSON remains a migration/debug artifact; native authored Course Packs are not yet the browser runtime source of truth.
 
-See `course-packs/README.md` for the contract and migration rules.
+See `course-packs/README.md` for the data contract and migration rules.
 
 ## Adaptive target selection
 
-The existing adaptive planner still mixes review and new targets:
+The adaptive session mix remains:
 
 - no scored history: **0 review + 3 new**
 - recent accuracy below 60%: **4 review + 1 new**
 - recent accuracy 60–79%: **3 review + 2 new**
 - recent accuracy 80%+: **2 review + 3 new**
 
-Due and weak targets receive higher review priority. Wrong retrieval can make a target return later in the same session.
+Due and weak targets receive higher review priority. V15.1 changes **how selected targets are ordered inside the learning experience**, not the identity of those targets or the existing learning-event ledger.
 
-During the current V14 test phase, **all units are directly accessible** so later Japanese/Mandarin content and interactions can be tested without manufacturing earlier progress.
+During the current test phase, all units remain directly accessible so later Japanese/Mandarin content can be evaluated without manufacturing progress history.
 
 ## Speaking: fixed target vs free response
 
-V14 deliberately separates two different things.
+Language Lab deliberately separates fixed-target speech from open production.
 
 ### Fixed-target speaking
 
@@ -127,20 +138,15 @@ For Japanese, one target can legitimately accept forms such as:
 イヌ
 ```
 
-Course data supports:
+Course data supports `native`, `kanjiForm`, `speechForms`, and `speechAliases`.
 
-- `native`
-- `kanjiForm`
-- `speechForms`
-- `speechAliases`
-
-The speech engine uses those authored forms rather than requiring one hard-coded surface string.
+Transcript matching is still **text-recognition evidence**, not phoneme-level pronunciation, Japanese pitch-accent, accent, or Mandarin tone grading.
 
 ### Open/free response
 
 When a task allows many natural answers, Language Lab does **not** assign a fake percentage because the learner did not copy one model sentence.
 
-The browser can display the recognized transcript and record that production practice happened, but true semantic conversation assessment is a separate future capability.
+The browser may capture what it heard and record that production practice happened. Genuine semantic conversation assessment is a separate capability.
 
 ## Japanese scaffolding
 
@@ -154,7 +160,7 @@ Japanese currently combines:
 - polite/casual/formal topics in later stages
 - Romaji scaffolding that can fade with recognition
 - Hindi/Devanagari pronunciation support
-- data-driven Kanji/Kana speech transcript equivalence
+- data-driven Kanji/Kana/Katakana speech equivalence
 
 The next major curriculum work is to integrate Kanji directly into elementary+ vocabulary/grammar examples and increase content density, especially in upper/advanced stages.
 
@@ -169,7 +175,7 @@ Mandarin currently combines:
 - Pinyin scaffolding that can fade
 - Hindi/Devanagari pronunciation guidance with tone markers
 
-A dedicated tone-pair drill and deeper intermediate grammar practice remain planned improvements.
+Dedicated tone-pair drills and deeper intermediate grammar practice remain planned improvements.
 
 ## Main navigation
 
@@ -183,34 +189,35 @@ Journey is the normal entry point.
 
 ## Current runtime architecture
 
-The application uses browser ES modules under `src/`:
+The browser runtime uses ES modules under `src/`:
 
 - `src/app.js` — bootstrap and coordination
 - `src/data.js` — normalized course/stage/target data and accepted speech forms
 - `src/session.js` — adaptive review/new target selection
-- `src/learning-flow.js` — **V14 integrated unit-experience planner**
-- `src/journey-v14.js` — **V14 Journey renderer and interaction engine**
+- `src/course-pack.js` — V15 Course Pack schema/compiler/typed activity registry
+- `src/activity-engine.js` — **V15.1 typed/interleaved activity planner**
+- `src/learning-flow.js` — assembles unit context and delegates target ordering to the activity engine
+- `src/journey-v14.js` — active Journey renderer/interaction engine during migration
 - `src/practice.js` — focused listening/speaking practice
-- `src/pronunciation-hi.js` — Japanese/Mandarin Hindi pronunciation guidance
-- `src/learning.js` — derived learning evidence, review signals, mastery and XP feedback
+- `src/pronunciation-hi.js` — Japanese/Mandarin Hindi pronunciation support
+- `src/learning.js` — event-indexed learning evidence, review signals, mastery and XP feedback
 - `src/event-db.js` — IndexedDB learning-event persistence
 - `src/store.js` — scoped local state
 - `src/cloud.js` — optional auth/Supabase synchronization
 - `src/audio.js` — browser TTS and device voice selection
-- `src/course.js` — detailed notes, vocabulary, cards, quiz, writing and progress
-- `src/home.js` — first-visit experience and returning learner dashboard
+- `src/course.js` — lesson notes, vocabulary, cards, quiz, writing and progress
+- `src/home.js` — first-visit and returning-learner dashboard
 - `src/auth-ui.js` — optional account UX
 - `src/writing.js` — touch/stylus/mouse writing pad
 - `src/utils.js` — shared helpers and speech matching
-- `src/course-pack.js` — V15 Course Pack compiler/validator used for migration checks, not active rendering yet
 
-V7/V8/V9 JavaScript files remain temporary **content-authoring layers** during Course Pack parity work. The goal is to remove them after a later V15 runtime cutover instead of maintaining permanent parallel authoring systems.
+V7/V8/V9 JavaScript files remain temporary content-authoring layers during Course Pack parity work. The goal is to remove them after native Course Packs and the runtime cutover are proven, not maintain permanent dual authoring systems.
 
 ## Local, cloud and offline behavior
 
 Local:
 
-- `localStorage` — small scoped UI/preferences, positions and V14 activity-resume metadata
+- `localStorage` — small scoped UI/preferences and Journey resume metadata
 - IndexedDB — append-oriented learning events
 
 Optional Supabase:
@@ -219,26 +226,22 @@ Optional Supabase:
 - `learning_events`
 - `course_positions`
 
-The service worker cache `language-lab-free-v14-0-1` includes the active V14 Journey, integrated planner, pronunciation support and required runtime assets for offline startup of an already-installed app.
-
-The V15 compiler is not an active browser dependency yet, so this migration foundation does not require a service-worker cache change.
+The service-worker cache is `language-lab-free-v15-1`. It includes the active Journey plus `course-pack.js`, `activity-engine.js`, `learning-flow.js`, pronunciation support and the other required runtime assets so an already-installed PWA can start offline.
 
 ## Important limitations
 
 Language Lab Free is still in active development.
 
-- Japanese/Mandarin `advanced` stages are **internal curriculum stages**, not an official JLPT/HSK guarantee.
-- The current content volume is **not yet enough to claim true zero-to-certified-advanced proficiency**.
-- Browser speech matching is transcript matching, **not** phoneme-level pronunciation, accent, Japanese pitch-accent or Mandarin tone grading.
+- Japanese/Mandarin `advanced` stages are **internal curriculum stages**, not official JLPT/HSK guarantees.
+- Current content volume is **not enough to claim zero-to-certified-advanced proficiency**.
+- Browser speech matching is transcript matching, not phoneme/accent/pitch-accent/tone grading.
 - Free-response scenarios do not yet semantically grade arbitrary answers.
-- Longer natural multi-speaker listening needs much more content.
-- Japanese Kanji integration needs to be expanded through elementary and later stages.
+- Longer natural multi-speaker listening needs more authored content.
+- Japanese Kanji integration needs expansion through elementary and later stages.
 - Mandarin still needs dedicated tone-pair practice.
 - Writing practice does not yet judge character shape or stroke order with AI.
-- Review scheduling remains a lightweight interval model rather than full FSRS.
+- Review scheduling remains lightweight rather than FSRS.
 - The other eight languages remain foundation courses.
-
-These limitations are intentional product statements, not hidden behind “advanced” marketing.
 
 ## Development checks
 
@@ -254,7 +257,7 @@ To emit generated Japanese/Mandarin Course Packs for inspection:
 npm run course-packs:build
 ```
 
-The test suite covers Node/runtime checks plus representative desktop, Android, iPhone, account/Guest, IndexedDB and PWA/offline flows. Course Pack tests additionally cover stable identity, connected-content preservation, compiler immutability and reference validation.
+Tests cover the interleaving contract, Course Pack validation, desktop/mobile browser flows, account/Guest isolation, IndexedDB persistence, pronunciation scaffolding and PWA/offline startup.
 
 ## Hosting
 

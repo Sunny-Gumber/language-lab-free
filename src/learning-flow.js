@@ -1,6 +1,7 @@
 import{stageForUnit}from'./data.js';
 import{learningEvents}from'./learning.js';
 import{buildJourneySession}from'./session.js';
+import{buildInterleavedActivityPlan,assertInterleavedActivityPlan}from'./activity-engine.js';
 import{unique}from'./utils.js';
 
 const targetOf=event=>event.targetId||event.target_id;
@@ -71,18 +72,8 @@ export function buildIntegratedExperience(course,unitIndex){
   const targets=plan.queue.map(entry=>itemTarget(course,entry)).filter(Boolean);
   const dialogue=dialogueFor(unit);const reading=readingFor(unit);const checkpoint=stageCheckpointFor(course,unitIndex);
   const production=unit?.v14?.production||unit?.v9?.production||unit?.production||`Use the unit goal without looking at the model: ${unitCanDo(unit)}`;
-  const activities=[];
-  activities.push({type:'mission',key:`mission:${unit.id}`});
   const connectedDialogue=dialogue.length?dialogue:fallbackDialogue(targets);
-  if(connectedDialogue.length)activities.push({type:'dialogue',key:`dialogue:${unit.id}`,dialogue:connectedDialogue});
-  for(const target of targets){
-    activities.push({type:'learn',key:`learn:${target.id}:${target.kind}`,target});
-    activities.push({type:'retrieve',key:`retrieve:${target.id}:${target.kind}`,target});
-  }
-  if(reading?.native)activities.push({type:'reading',key:`reading:${unit.id}`,reading});
-  activities.push({type:'scenario',key:`scenario:${unit.id}`,production});
-  if(checkpoint)activities.push({type:'checkpoint',key:`checkpoint:${checkpoint.stageId}`,checkpoint});
-  activities.push({type:'complete',key:`complete:${unit.id}`});
+  const activities=assertInterleavedActivityPlan(buildInterleavedActivityPlan({unitId:unit.id,targets,dialogue:connectedDialogue,reading,production,checkpoint}));
   const introduced=targets.filter(target=>target.kind==='new').length,review=targets.filter(target=>target.kind!=='new').length;
   const seen=new Set(events.map(targetOf));
   return{

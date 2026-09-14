@@ -4,7 +4,7 @@
 
 Language Lab Free is a **guided adaptive language-learning platform with deepening Japanese and Mandarin paths and foundation courses for eight additional languages**.
 
-The product is designed around a learning loop that moves a learner from understanding a situation to hearing connected language, learning useful forms, retrieving them from memory, reading them in context and finally producing a response.
+The product should help learners build practical language ability through connected input, retrieval, reading and production rather than merely complete isolated cards.
 
 Supported languages:
 
@@ -19,13 +19,11 @@ Supported languages:
 - Arabic
 - Portuguese
 
-Japanese and Mandarin are the reference courses for deeper staged curriculum design. Korean, English, Hindi, Spanish, French, German, Arabic and Portuguese currently remain foundation courses and should not be presented as equally deep.
+Japanese and Mandarin are the reference courses for deeper staged curriculum design. The other eight languages remain foundation courses and must not be presented as equally deep.
 
-## 2. Product goal
+## 2. Product goals
 
-The long-term product goal is to help a learner build practical language ability rather than simply finish lessons.
-
-A completed learning path should increasingly train the learner to:
+The learning path should increasingly train a learner to:
 
 1. understand useful spoken language
 2. connect sound, script and meaning
@@ -35,21 +33,22 @@ A completed learning path should increasingly train the learner to:
 6. revisit weak material over time
 7. progress from survival communication toward increasingly complex real-world use
 
-The product must remain honest about course depth. Internal labels such as `advanced` describe curriculum topics and do not by themselves claim JLPT, HSK, CEFR or other certification equivalence.
+Internal labels such as `advanced` describe curriculum stages; they do not by themselves claim JLPT, HSK, CEFR or certification equivalence.
 
-## 3. V14 integrated learning loop
+## 3. Active V15.1 learning loop
 
-The normal Journey experience follows this sequence:
+The learner experience builds on the V14 connected Journey with a V15.1 typed/interleaved planner:
 
 ```text
 Mission
   -> Model conversation / connected input
-  -> Learn useful forms
-  -> Retrieve from memory
+  -> Adaptive target selection
+  -> Review target: retrieve before re-teaching
+  -> New target: introduce -> intervening activity -> retrieve
   -> Connected reading when available
   -> Free-response scenario
   -> Stage checkpoint when applicable
-  -> Return weak material later
+  -> Weak material may return later
 ```
 
 ### Mission
@@ -58,22 +57,25 @@ The learner first sees a real-world can-do goal and the useful concepts involved
 
 ### Model conversation
 
-When authored dialogue exists, the learner hears language in a multi-turn situation before treating individual targets as flashcards.
+When authored dialogue exists, the learner encounters language in a connected situation before treating targets as isolated forms.
 
-### Learn useful forms
+### New target introduction
 
-The learner connects sound, script, meaning and grammar/pronunciation guidance.
+A new target connects sound, script, meaning and appropriate grammar/pronunciation support.
 
-Japanese and Mandarin may additionally show:
+For normal multi-target sessions, the first retrieval of that target should **not** occur on the immediately following activity. At least one meaningful activity should intervene.
 
-- Kanji/Hanzi
-- Kana/Pinyin
-- Romaji/Pinyin scaffolding
-- Hindi/Devanagari pronunciation guidance
+### Review-first retrieval
 
-### Retrieve
+Previously seen review material should be retrieved before the system reveals/re-teaches the answer. Review should test memory rather than prime it immediately beforehand.
 
-The learner must bring the language back from meaning rather than only recognize it passively. Incorrect retrieval should cause the target to return later in the same session or future review.
+### Spacing limitation
+
+If a session genuinely contains only one usable new target and there is no meaningful intervening activity, immediate retrieval is allowed only as an explicit `spacingLimited` case. The system should not generate meaningless filler solely to satisfy a spacing rule.
+
+### Wrong-answer return
+
+Incorrect retrieval may cause the target to return later in the same session and/or future review.
 
 ### Connected reading
 
@@ -87,11 +89,9 @@ Browser speech recognition may display what the browser heard. It remains transc
 
 ### Stage checkpoint
 
-At the end of a stage, the learner should see the stage can-do list and perform a connected task rather than only answer isolated multiple-choice questions.
+At the end of a stage, the learner sees a can-do list and performs a connected task rather than only answering isolated recognition questions.
 
 ## 4. Adaptive session planning
-
-Journey sessions continue to mix previously seen material with new material.
 
 Current adaptive target mix:
 
@@ -100,13 +100,64 @@ Current adaptive target mix:
 - recent accuracy 60–79%: 3 review + 2 new
 - recent accuracy 80%+: 2 review + 3 new
 
-Weak and due targets should receive higher review priority.
+Weak and due targets receive higher review priority.
 
-V14 may place the selected targets inside dialogue, retrieval and production activities instead of presenting the session as a flat list of independent cards.
+Target **selection** and activity **ordering** are separate responsibilities:
 
-During the current product test phase, all units may remain directly accessible so advanced units and interactions can be tested without manufacturing learner history.
+- `src/session.js` selects review/new targets.
+- `src/activity-engine.js` turns selected targets and authored context into a typed/interleaved activity plan.
+- `src/journey-v14.js` remains the active renderer during migration.
 
-## 5. Language-specific requirements
+During the current test phase, all units may remain directly accessible so later Japanese/Mandarin content can be evaluated without manufacturing learner history.
+
+## 5. V15 Course Pack and concept architecture
+
+V15 separates authored course data from runtime implementation through a versioned Course Pack contract.
+
+A Course Pack contains:
+
+- course metadata
+- stages / competency bands
+- stable learning concepts
+- units and can-do goals
+- prerequisites
+- authored dialogue, reading, production and checkpoint content
+- typed activity templates
+
+Existing V14 item/vocabulary target IDs must remain stable when those targets become V15 concepts unless a deliberate migration updates historical learning events.
+
+One concept may participate across recognition, recall, listening, reading, speaking and writing while learner evidence remains skill-specific.
+
+### Typed activity contract
+
+Canonical activity types may include:
+
+- mission
+- model-dialogue
+- concept-intro
+- multiple-choice
+- translation
+- cloze
+- matching
+- word-bank
+- listening-choice
+- listening-dictation
+- fixed-speaking
+- fixed-retrieval
+- free-speaking
+- free-writing
+- reading
+- reading-question
+- roleplay
+- script-writing
+- checkpoint
+- complete
+
+V15.1 actively uses a subset of these types. Temporary renderer aliases may remain while `src/journey-v14.js` is the active renderer, but pedagogical logic should be expressed through canonical activity types.
+
+Generated or authored activities must be validated before rendering. Arbitrary model-generated HTML must not become a Journey execution path.
+
+## 6. Language-specific requirements
 
 ### Japanese
 
@@ -121,13 +172,13 @@ The Japanese course should progressively integrate:
 - casual, polite, honorific and humble register
 - spontaneous and structured production
 
-Romaji should fade as recognition improves. Hindi pronunciation support may remain visible longer as an optional learner aid. Authored `kanjiForm`, `speechForms` and `speechAliases` must be accepted by speech transcript matching.
+Romaji should fade as recognition improves. Hindi pronunciation support may remain visible longer as an optional learner aid. Authored `kanjiForm`, `speechForms` and `speechAliases` must remain valid accepted transcript forms.
 
 ### Mandarin Chinese
 
 The Mandarin course should progressively integrate:
 
-- Pinyin and the four tones
+- Pinyin and four-tone foundations
 - tone-pair awareness
 - Hanzi
 - practical vocabulary and grammar
@@ -140,25 +191,13 @@ Pinyin may fade as recognition grows. Hindi/Devanagari pronunciation support sho
 
 ### Other eight languages
 
-The other eight languages currently provide practical foundations using the same learning engine. They should be expanded only after the deeper Japanese/Mandarin course model is proven.
-
-## 6. Navigation
-
-The learning product uses five primary areas:
-
-- **Journey** — guided integrated path and recommended next learning session
-- **Practice** — focused listening, shadowing, model-answer speaking and conversation drills
-- **Review** — weak/due material, recall and recognition
-- **Explore** — lesson notes, language guide, vocabulary and writing
-- **Progress** — evidence and course progress
-
-Journey is the normal entry point.
+The other eight languages currently provide practical foundations using the same engine. They should be expanded after the deeper Japanese/Mandarin model is validated rather than receiving shallow mass-generated advanced content.
 
 ## 7. Speech behavior
 
-Speech transcript matching must use authored accepted forms rather than one surface string.
+Fixed-target transcript matching must use authored accepted forms rather than one surface string.
 
-For example, a Japanese target may accept:
+For example, when authored as equivalents:
 
 ```text
 いぬ
@@ -166,57 +205,29 @@ For example, a Japanese target may accept:
 イヌ
 ```
 
-as equivalent transcript representations when those forms belong to the same authored target.
+may represent the same spoken target.
 
-Free-response scenarios are different: the system may capture the transcript but should not assign a percentage merely because the response differs from one sample sentence.
+Free-response scenarios are different: the system may capture a transcript but should not assign a percentage merely because the response differs from one sample sentence.
 
 ## 8. Learning evidence
 
-The system may continue to record learning events for practice and adaptive decisions.
-
 Important semantics:
 
-- passive playback is not learning mastery evidence
-- listening checks can be assessed
-- retrieval can be assessed
-- fixed-target speech can use transcript-match evidence
+- passive playback is not mastery evidence
+- listening checks may be assessed
+- retrieval may be assessed
+- fixed-target speech may use accepted-form transcript-match evidence
 - open free response is production practice unless genuine semantic/pronunciation assessment exists
 - manual speaking is practice coverage, not a fake 0% failure
 - writing is effort/coverage until genuine writing assessment exists
 
-XP is optional product feedback and must not define curriculum completion by itself.
+XP is optional feedback and must not define curriculum completion by itself.
 
-## 9. V15 content and curriculum architecture
+V15.1 must preserve the existing IndexedDB event ledger and stable target identities.
 
-V15 should separate authored course data from runtime implementation through a versioned **Course Pack** contract.
+## 9. Deterministic curriculum ownership
 
-A Course Pack contains:
-
-- course metadata
-- stages / competency bands
-- stable learning concepts
-- units and can-do goals
-- prerequisites
-- authored dialogue, reading, production and checkpoint content
-- typed activity templates
-
-The migration must preserve existing V14 item/vocabulary target IDs when those targets become V15 concepts. This keeps historical IndexedDB/Supabase learning events attached to the same learning identity.
-
-### Concept requirements
-
-One concept may participate in several skills without duplicating identity. Examples include vocabulary, grammar, expressions, script/characters and pronunciation targets.
-
-The same concept may therefore appear in listening, recognition, recall, reading, speaking and writing activities while learner evidence remains skill-specific.
-
-### Typed activity requirements
-
-The activity contract may support connected input and explicit exercise types such as dialogue, cloze, matching, word bank, listening, retrieval, fixed speaking, open speaking/writing, reading questions, roleplay, script writing and checkpoints.
-
-Generated or authored activities must be validated before rendering. Arbitrary model-generated HTML must not become a Journey execution path.
-
-### Deterministic curriculum ownership
-
-Curriculum order, prerequisites, competencies and progression remain application-owned and deterministic.
+Curriculum order, prerequisites, competencies, target selection and progression remain application-owned and deterministic.
 
 A future AI layer may:
 
@@ -235,13 +246,21 @@ AI must **not** directly:
 
 Learner evidence is recorded first; deterministic learning logic decides progression.
 
-### Migration behavior
+## 10. Navigation
 
-The active learner runtime remains V14 until native Course Pack data and the V15 runtime have passed parity/regression checks. V7/V8/V9 authoring layers must not become permanent parallel sources after cutover; superseded layers should be removed once Course Packs are authoritative.
+Primary areas:
 
-## 10. Persistence and accounts
+- **Journey** — guided integrated path and recommended next session
+- **Practice** — focused listening, shadowing and fixed-target speaking
+- **Review** — weak/due material, recall and recognition
+- **Explore** — lesson notes, language guide, vocabulary and writing
+- **Progress** — evidence and course progress
 
-The current implementation supports:
+Journey is the normal entry point.
+
+## 11. Persistence and accounts
+
+The implementation supports:
 
 - Guest learning
 - IndexedDB learning-event storage
@@ -249,17 +268,17 @@ The current implementation supports:
 - optional Supabase synchronization
 - account-scoped local/cloud data
 
-These systems are infrastructure around the learning experience, not the curriculum model itself.
+No V15.1 database-schema change is required.
 
-## 11. Offline and hosting
+## 12. Offline and hosting
 
 The application remains a static browser/PWA product hosted from GitHub Pages.
 
-An installed app should cache the runtime modules required for the active V14 learning flow, including the connected Journey planner and Hindi pronunciation support.
+The active service-worker cache must include the Course Pack type registry, V15.1 activity engine, learning-flow planner, Journey renderer and language-specific pronunciation support required for offline startup.
 
-V15 content/compiler work must not require a server just to open authored lessons. Optional future AI features may use an external gateway, but core Journey/Practice/Review/reading/progress should remain functional when AI is unavailable.
+Core Journey/Practice/Review/reading/progress must remain functional without an AI service.
 
-## 12. Quality gates
+## 13. Quality gates
 
 Normal development checks:
 
@@ -269,28 +288,28 @@ npm run e2e
 npm run course-packs:check
 ```
 
-V14 regression coverage should include:
+V15.1 regression coverage should include:
 
 - first-visit flow
 - honest course-depth presentation
-- integrated Journey sequence
-- connected dialogue
-- retrieval + speaking
+- canonical activity typing
+- delayed/interleaved retrieval for normal multi-target sessions
+- review-before-reteach behavior
+- explicit single-target `spacingLimited` behavior
+- wrong-answer same-session retry
+- connected dialogue/reading
+- retrieval + fixed-target speaking
+- open-response non-fake-scoring
 - accepted speech forms
 - Japanese/Mandarin Hindi pronunciation guidance
-- saved V14 activity resume
-- account/Guest flows where still enabled
+- saved Journey activity resume
+- account/Guest isolation
+- IndexedDB persistence
 - offline PWA startup
 
-V15 Course Pack changes should additionally verify:
+Course Pack coverage should additionally verify stable target identity, compiler immutability, valid references and rejection of unknown types/broken references.
 
-- stable legacy target identity
-- compiler immutability
-- valid stage/unit/concept references
-- preserved dialogue/reading/checkpoint metadata
-- rejection of unknown activity types and broken references
-
-## 13. Current limitation statement
+## 14. Current limitation statement
 
 Language Lab Free should currently be described as:
 

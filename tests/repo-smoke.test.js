@@ -70,11 +70,12 @@ test('home is honest about Japanese/Mandarin depth and eight foundation courses'
 test('integrated Journey uses the V15.1 typed interleaved planner without replacing the V14 renderer',()=>{
   assert.ok(exists('src/journey-v14.js'));assert.ok(exists('src/learning-flow.js'));assert.ok(exists('src/activity-engine.js'));assert.ok(exists('journey-v14.css'));
   const app=read('src/app.js'),journey=read('src/journey-v14.js'),flow=read('src/learning-flow.js'),engine=read('src/activity-engine.js');
-  assert.match(app,/from'\.\/journey-v14\.js'/);assert.match(app,/version:'14\.0\.1'/);assert.match(app,/tab:'journey'/);
+  assert.match(app,/from'\.\/journey-v14\.js'/);assert.match(app,/version:'15\.1\.0'/);assert.match(app,/tab:'journey'/);
   for(const label of['Journey','Practice','Review','Explore','Progress'])assert.match(journey,new RegExp(label));
   assert.match(flow,/buildInterleavedActivityPlan/);assert.match(flow,/assertInterleavedActivityPlan/);
   for(const canonical of["'model-dialogue'","'concept-intro'","'fixed-retrieval'","'free-speaking'"])assert.match(engine,new RegExp(canonical));
   assert.match(journey,/Free-response scenario/);assert.match(journey,/Respond in your own words/);assert.match(journey,/Connected reading/);assert.match(journey,/Model conversation/);
+  assert.match(journey,/Retrieve after a short delay/);assert.match(journey,/interleaved retrieval/);
   assert.match(journey,/bestSpeechMatch/);assert.match(journey,/speechForms/);assert.match(journey,/hindiPronunciationLabel/);
 });
 

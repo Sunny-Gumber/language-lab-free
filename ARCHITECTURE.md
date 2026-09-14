@@ -1,4 +1,4 @@
-# Architecture — Language Lab Free V14
+# Architecture — Language Lab Free V14 runtime / V15 migration foundation
 
 ## 1. Overview
 
@@ -30,6 +30,49 @@ src/journey-v14.js
 ```
 
 The application continues to use ES modules, IndexedDB, localStorage, an offline service worker and optional Supabase account synchronization.
+
+### V15 migration seam
+
+V15 starts by separating authoring data from the learner runtime without introducing a second production Journey.
+
+```text
+existing V7/V8/V9 content
+        |
+        v
+src/data.js
+  existing normalization + stable target IDs
+        |
+        v
+src/course-pack.js
+  read-only legacy compiler
+  concepts + stages + units + typed activity templates
+        |
+        +--> validation
+        +--> migration tests
+        +--> optional generated JSON for inspection
+```
+
+`src/course-pack.js` is **not** loaded by the active browser runtime yet. V14 remains production while the new content contract is validated. This intentionally preserves current GitHub Pages/PWA behavior, learning-event identity, Guest/account isolation and offline startup.
+
+The V15 target architecture is:
+
+```text
+Course Pack
+   ↓
+Concept graph
+   ↓
+Deterministic curriculum / competency rules
+   ↓
+Adaptive planner
+   ↓
+Typed activity engine
+   ↓
+Journey / Practice / Review
+   ↓
+Learning-event evidence
+```
+
+Existing item/vocabulary IDs become V15 concept IDs unchanged during migration so historical IndexedDB/Supabase events continue to identify the same learning targets. AI, when added later, must operate inside validated course/activity contracts; it must not directly set mastery, complete units or redefine progression.
 
 ## 2. V14 learning architecture
 
@@ -90,6 +133,21 @@ Course data is treated as immutable after normalization. V14.0.1 therefore cache
 
 This avoids rebuilding the same arrays and scanning the same curriculum on every render.
 
+### `src/course-pack.js`
+
+This is the V15 content-contract seam during migration.
+
+It currently provides:
+
+- Course Pack schema version `15.0`
+- concept types and typed activity names
+- conversion of normalized V14 courses into Course Packs
+- preservation of existing target IDs and accepted speech forms
+- conversion of V9/V14 dialogue, reading, production, script focus and stage checkpoints
+- validation for duplicate IDs, unknown types and broken references
+
+The compiler is read-only. It must not mutate normalized V14 course objects. `scripts/build-course-packs.js` compiles Japanese and Mandarin by default and can compile all courses for migration inspection.
+
 ## 3. Runtime module map
 
 - `src/app.js` — bootstrap and render coordination; imports V14 Journey.
@@ -109,6 +167,7 @@ This avoids rebuilding the same arrays and scanning the same curriculum on every
 - `src/auth-ui.js` — optional account UX.
 - `src/writing.js` — touch/stylus/mouse writing pad.
 - `src/utils.js` — shared utilities, speech normalization and matching.
+- `src/course-pack.js` — V15 migration/compiler contract; not yet part of active browser rendering.
 
 Historical V13 Journey/resume modules, V13 Journey CSS and the V10 compatibility runtime were removed in V14.0.1. Git history is the archive; they are not maintained as parallel implementations.
 
@@ -176,6 +235,8 @@ A selected learning target includes:
 ```
 
 This lets one target participate in listening, retrieval, speech and script presentation without duplicating identity.
+
+The V15 Course Pack model generalizes this identity into a `concept`, which can later participate across recognition, recall, listening, speaking, reading and writing without creating a second target ID for each surface representation.
 
 ## 6. Fixed-target speech vs open production
 
@@ -246,19 +307,22 @@ Optional Supabase services remain available for account testing:
 - `learning_events`
 - `course_positions`
 
-V14.0.1 does not require new database tables or schema changes.
+The V15 Course Pack foundation does not require new database tables or schema changes.
 
 ## 11. Offline/PWA
 
 `sw.js` cache version `language-lab-free-v14-0-1` includes the V14 Journey, learning-flow, session, pronunciation and runtime modules plus the pinned Supabase browser runtime.
 
-An already-installed app should therefore refresh to the V14.0.1 runtime and continue to start offline after the new cache activates.
+`src/course-pack.js` is not an active browser dependency yet, so this migration foundation intentionally does not change the service-worker asset list or cache version.
 
 ## 12. Testing
 
 ```bash
 npm run ci
 npm run e2e
+npm run course-packs:check
 ```
 
-Browser coverage is intended to exercise visitor vs returning learner state, honest course-depth messaging, mission -> dialogue -> target -> retrieval flow, retry signaling, accepted speech forms, Hindi pronunciation scaffolding, account/Guest infrastructure, IndexedDB persistence and PWA offline startup.
+`tests/course-pack.test.js` additionally verifies Japanese/Mandarin V15 compilation, stable target identity, authored connected content, checkpoint preservation, compiler immutability and validation failures for broken references.
+
+Browser coverage remains intended to exercise visitor vs returning learner state, honest course-depth messaging, mission -> dialogue -> target -> retrieval flow, retry signaling, accepted speech forms, Hindi pronunciation scaffolding, account/Guest infrastructure, IndexedDB persistence and PWA offline startup.

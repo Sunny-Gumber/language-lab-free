@@ -27,6 +27,13 @@ test('review targets are tested before re-teaching while new targets remain dela
   assert.equal(positions(plan,'concept-intro','r1').length,0,'Review targets should not be re-taught before first retrieval');
 });
 
+test('single-target sessions remain valid without fabricated filler content',()=>{
+  const plan=buildInterleavedActivityPlan({unitId:'unit:single',targets:[target('only')],production:'Respond'});
+  const retrieval=plan.find(activity=>canonicalActivityType(activity)==='fixed-retrieval');
+  assert.equal(retrieval.spacingLimited,true);
+  assert.doesNotThrow(()=>assertInterleavedActivityPlan(plan));
+});
+
 test('activity engine emits canonical V15 types with V14 renderer aliases',()=>{
   const plan=buildInterleavedActivityPlan({unitId:'unit:typed',targets:[target('a'),target('b')],production:'Respond'});
   const canonical=plan.map(canonicalActivityType);

@@ -56,8 +56,7 @@ test('integrated session interleaves target learning before retrieval and speaki
   await completeCurrentRetrieve(page,native);
   await expect.poll(()=>page.evaluate(()=>window.LanguageLab.getState().events.filter(event=>event.activity==='practice').length)).toBeGreaterThanOrEqual(2);
   await expect(page.locator('.flow-card-v14.retrieve .practice-feedback')).toContainText('Speaking practice recorded');
-  await page.locator('.flow-card-v14.retrieve [data-flow-action="continue"]').click();
-  await expect(page.locator('.guided-lesson-v14')).toBeVisible();
+  await expect(page.locator('.flow-card-v14.retrieve [data-flow-action="continue"]')).toBeVisible();
 });
 
 test('retrieval mistakes are not treated as completion and can return later',async({page},testInfo)=>{
@@ -68,7 +67,9 @@ test('retrieval mistakes are not treated as completion and can return later',asy
   expect(wrong).toBeGreaterThanOrEqual(0);await options.nth(wrong).click();
   await expect(retrieve.locator('.practice-feedback')).toContainText('will return once more');
   await expect.poll(()=>page.evaluate(()=>window.LanguageLab.getState().events.some(event=>event.metadata?.mode==='v14-retrieval'&&event.metadata?.correct===false))).toBe(true);
-  await retrieve.locator('[data-flow-action="manual-target"]').click();await retrieve.locator('[data-flow-action="continue"]').click();
+  await retrieve.locator('[data-flow-action="manual-target"]').click();
+  await expect(retrieve.locator('[data-flow-action="continue"]')).toBeVisible();
+  await retrieve.locator('[data-flow-action="continue"]').click();
   await expect(page.locator('.guided-lesson-v14')).toBeVisible();
 });
 

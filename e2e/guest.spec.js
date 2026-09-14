@@ -1,5 +1,5 @@
 import{test,expect}from'@playwright/test';
-import{blockExternal}from'./helpers.js';
+import{advanceJourneyUntil,blockExternal}from'./helpers.js';
 
 async function waitForBoot(page){
   await expect.poll(()=>page.evaluate(()=>window.LanguageLab?.version||0)).toBe('14.0.1');
@@ -8,12 +8,9 @@ async function waitForBoot(page){
 async function openFirstRetrieve(page){
   await page.locator('[data-journey-start]').first().click();
   await expect(page.locator('.flow-card-v14.mission')).toBeVisible();
-  await page.locator('[data-flow-action="continue"]').click();
-  if(await page.locator('.dialogue-v14').count())await page.locator('[data-flow-action="continue"]').click();
-  await expect(page.locator('.flow-card-v14.target')).toBeVisible();
+  await advanceJourneyUntil(page,'.flow-card-v14.target');
   const native=(await page.locator('.guided-native-v14').first().textContent())?.trim();
-  await page.locator('[data-flow-action="continue"]').click();
-  await expect(page.locator('.flow-card-v14.retrieve')).toBeVisible();
+  await advanceJourneyUntil(page,'.flow-card-v14.retrieve');
   return native;
 }
 async function completeCurrentRetrieve(page,native){
@@ -41,19 +38,19 @@ test('new guest sees an honest start experience instead of an empty dashboard',a
   expect(overflow.scroll).toBeLessThanOrEqual(overflow.client+1);expect(errors).toEqual([]);
 });
 
-test('Japanese opens the V14 connected Journey and all units remain testable',async({page})=>{
+test('Japanese opens the connected Journey and all units remain testable',async({page})=>{
   await page.goto('/');await waitForBoot(page);await page.locator('[data-language="ja"]').click();
   await expect(page.locator('#courseName')).toHaveText('Japanese');
   await expect(page.locator('#journeyTab')).toHaveClass(/active/);
   await expect(page.locator('.journey-hero-v14 h2')).toContainText('I can');
-  await expect(page.locator('.learning-loop-v14')).toContainText('Hear connected language');
-  await expect(page.locator('.session-preview-v14')).toContainText('new targets');
+  await expect(page.locator('.learning-loop-v14')).toContainText('Retrieve after a short delay');
+  await expect(page.locator('.session-preview-v14')).toContainText('interleaved retrieval');
   await expect(page.locator('[data-journey-unit="0"]')).toBeEnabled();
   await expect(page.locator('[data-journey-unit="1"]')).toBeEnabled();
   await expect(page.locator('.v14-tabs [data-tab]')).toHaveCount(5);
 });
 
-test('integrated session moves from mission to dialogue, target learning, retrieval and speaking',async({page})=>{
+test('integrated session interleaves target learning before retrieval and speaking',async({page})=>{
   await page.goto('/');await waitForBoot(page);await page.locator('[data-language="ja"]').click();
   const native=await openFirstRetrieve(page);
   await completeCurrentRetrieve(page,native);
@@ -75,7 +72,7 @@ test('retrieval mistakes are not treated as completion and can return later',asy
   await expect(page.locator('.guided-lesson-v14')).toBeVisible();
 });
 
-test('first active V14 retrieval turns the start experience into the learner dashboard',async({page})=>{
+test('first active retrieval turns the start experience into the learner dashboard',async({page})=>{
   await page.goto('/');await waitForBoot(page);await page.locator('[data-language="ja"]').click();
   const native=await openFirstRetrieve(page);await completeCurrentRetrieve(page,native);
   await expect(page.locator('body')).not.toHaveClass(/visitor-mode/);
@@ -85,7 +82,7 @@ test('first active V14 retrieval turns the start experience into the learner das
   await expect(page.locator('.dashboard-grid')).toBeVisible();
 });
 
-test('V14 practice evidence persists in IndexedDB and course reset still works',async({page})=>{
+test('practice evidence persists in IndexedDB and course reset still works',async({page})=>{
   await page.goto('/');await waitForBoot(page);await page.locator('[data-language="ja"]').click();
   const native=await openFirstRetrieve(page);await completeCurrentRetrieve(page,native);
   const before=await page.evaluate(()=>window.LanguageLab.getState().events.filter(event=>event.activity==='practice').length);expect(before).toBeGreaterThanOrEqual(2);

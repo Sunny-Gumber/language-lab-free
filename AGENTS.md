@@ -25,7 +25,8 @@ Before changing code, read:
 3. `TASKS.md`
 4. `CHANGELOG.md`
 5. `README.md`
-6. `supabase/README.md` for database/sync work
+6. `course-packs/README.md` for V15 content-contract work
+7. `supabase/README.md` for database/sync work
 
 ## V14 development mandate
 
@@ -40,6 +41,19 @@ Therefore:
 5. Do not mass-generate shallow “advanced” content merely to increase unit count.
 6. Japanese and Mandarin should be treated as reference courses for the deeper learning model before expanding all ten languages equally.
 7. Keep product claims honest: an internal advanced stage is not automatically certified advanced proficiency.
+
+## V15 migration mandate
+
+V15 begins as a **content/data-model migration**, not a parallel production Journey.
+
+- `src/course-pack.js` is the versioned Course Pack compiler/validator seam.
+- Existing V14 stable item/vocabulary IDs must remain unchanged when they become V15 concepts unless an explicit migration plan updates historical learning events.
+- The legacy compiler must remain read-only; it must not mutate normalized `src/data.js` course objects.
+- Course Packs are data contracts, not runtime handlers. Do not put DOM code, progress mutations, account logic or provider secrets into course content.
+- Curriculum and progression rules remain deterministic. AI may later generate/explain/evaluate bounded activities, but AI must not directly set mastery, mark a unit complete or promote a learner.
+- Generated Course Pack JSON is a migration/debug artifact until native authored packs become the source of truth.
+- Do not maintain V7/V8/V9 and native Course Packs forever. After parity and runtime cutover are proven, remove superseded authoring layers rather than creating permanent dual systems.
+- Japanese and Mandarin remain the first reference packs. Do not mass-migrate all ten courses before the contract is proven.
 
 ## Code-hygiene mandate
 
@@ -131,10 +145,11 @@ Keep them honestly labelled as foundation courses until the deeper Japanese/Mand
 - `src/auth-ui.js` — optional account UX.
 - `src/writing.js` — writing pad.
 - `src/utils.js` — shared utilities and speech normalization/matching.
+- `src/course-pack.js` — V15 Course Pack schema/compiler/validator; migration-only until explicit runtime cutover.
 
 Historical V13 Journey/resume modules and V10 compatibility runtime have been removed from the active tree. Use Git history when historical implementation detail is needed; do not reintroduce those files as parallel runtime paths.
 
-V7/V8/V9 files remain course-content authoring layers. Do not reintroduce runtime monkey-patching through them.
+V7/V8/V9 files remain course-content authoring layers during the V15 parity phase. Do not add new runtime monkey-patching through them. Once native Course Packs become authoritative, remove the superseded layers instead of keeping both systems active indefinitely.
 
 ## Persistence guidance
 
@@ -142,6 +157,7 @@ V7/V8/V9 files remain course-content authoring layers. Do not reintroduce runtim
 - localStorage is for small scoped state, not an ever-growing event history.
 - V14 session resume currently preserves unit/activity continuity; exact old V13 item-step compatibility is not a release requirement.
 - Existing Supabase/account infrastructure may remain during the test phase but should not dictate pedagogy.
+- V15 concept migration must preserve target identity so old learning events continue to resolve unless a dedicated event migration is explicitly designed.
 
 ## Development workflow
 
@@ -149,12 +165,13 @@ For meaningful code changes:
 
 1. Understand the learning outcome, not only the requested UI.
 2. Inspect the relevant curriculum data and runtime modules.
-3. Update the learning-flow contract before layering hacks into the UI.
+3. Update the learning-flow/content contract before layering hacks into the UI.
 4. Search for duplicate/dead implementation before adding code.
 5. Add/update tests for the new behavior.
 6. Run:
    - `npm run ci`
    - `npm run e2e` for browser/PWA changes
+   - `npm run course-packs:check` for Course Pack changes
 7. Check mobile layout and runtime console errors.
 8. Update `README.md`, `PRD.md`, `ARCHITECTURE.md`, `TASKS.md` and `CHANGELOG.md` when contracts change.
 9. Use a feature branch + pull request for non-trivial work.
@@ -174,6 +191,8 @@ A learning-model or runtime change is complete when:
 - relevant tests pass
 - security/account isolation has not been accidentally weakened
 - documentation states the actual capability and remaining limitations
+
+A Course Pack migration change is additionally complete when stable legacy target identity is preserved, the compiler is read-only, all concept/activity references validate, and no production runtime switch is implied unless that cutover is explicitly part of the change.
 
 ## When uncertain
 

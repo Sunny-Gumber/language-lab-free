@@ -22,17 +22,22 @@ function makeActivity(activityType,key,payload={}){
 function targetKey(target){return`${target.id}:${target.kind||'review'}`}
 
 export function buildInterleavedActivityPlan({unitId,targets=[],dialogue=[],reading=null,production='',checkpoint=null}){
-  const activities=[];
+  const activities=[],introducedAt=new Map();
   activities.push(makeActivity('mission',`mission:${unitId}`));
   if(dialogue.length)activities.push(makeActivity('model-dialogue',`dialogue:${unitId}`,{dialogue}));
 
   const pendingNew=[];
-  const retrieve=target=>activities.push(makeActivity('fixed-retrieval',`retrieve:${targetKey(target)}`,{target}));
+  const retrieve=(target,extra={})=>activities.push(makeActivity('fixed-retrieval',`retrieve:${targetKey(target)}`,{target,...extra}));
   const introduce=target=>{
+    const index=activities.length;
     activities.push(makeActivity('concept-intro',`learn:${targetKey(target)}`,{target}));
-    pendingNew.push(target);
+    introducedAt.set(target.id,index);pendingNew.push(target);
   };
-  const flushOldestNew=()=>{const target=pendingNew.shift();if(target)retrieve(target)};
+  const flushOldestNew=()=>{
+    const target=pendingNew.shift();if(!target)return;
+    const introIndex=introducedAt.get(target.id),spacingLimited=activities.length-introIndex<2;
+    retrieve(target,spacingLimited?{spacingLimited:true}:{});
+  };
 
   for(const target of targets){
     if(target.kind==='new'){
@@ -62,7 +67,7 @@ export function assertInterleavedActivityPlan(activities=[]){
     if(!canonical||!CANONICAL_TYPES.has(canonical))errors.push(`Unknown activity type at ${index}: ${activity?.type||activity?.activityType||'missing'}`);
     const targetId=activity?.target?.id;
     if(canonical==='concept-intro'&&targetId)introducedAt.set(targetId,index);
-    if(canonical==='fixed-retrieval'&&targetId&&introducedAt.has(targetId)){
+    if(canonical==='fixed-retrieval'&&targetId&&introducedAt.has(targetId)&&!activity.spacingLimited){
       const introIndex=introducedAt.get(targetId);
       if(index-introIndex<2)errors.push(`New target ${targetId} is retrieved immediately after introduction.`);
     }

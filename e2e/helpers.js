@@ -3,6 +3,17 @@ export async function blockExternal(page){
   await page.route('https://ykaluwgryohxcsccdacf.supabase.co/**',route=>route.abort());
 }
 
+export async function advanceJourneyUntil(page,selector,maxSteps=12){
+  for(let step=0;step<=maxSteps;step++){
+    const target=page.locator(selector).first();
+    if(await target.count()&&await target.isVisible())return target;
+    const next=page.locator('[data-flow-action="continue"]').last();
+    if(!await next.count())throw new Error(`Journey cannot advance to ${selector}: no continue action is available.`);
+    await next.click();
+  }
+  throw new Error(`Journey did not reach ${selector} within ${maxSteps} steps.`);
+}
+
 export async function installMockSupabase(page,{profile={},events=[],positions=[],user={},signedIn=true}={}){
   await page.addInitScript(({profile,events,positions,user,signedIn})=>{
     const clone=value=>JSON.parse(JSON.stringify(value));

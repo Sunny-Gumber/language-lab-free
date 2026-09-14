@@ -186,7 +186,60 @@ Important semantics:
 
 XP is optional product feedback and must not define curriculum completion by itself.
 
-## 9. Persistence and accounts
+## 9. V15 content and curriculum architecture
+
+V15 should separate authored course data from runtime implementation through a versioned **Course Pack** contract.
+
+A Course Pack contains:
+
+- course metadata
+- stages / competency bands
+- stable learning concepts
+- units and can-do goals
+- prerequisites
+- authored dialogue, reading, production and checkpoint content
+- typed activity templates
+
+The migration must preserve existing V14 item/vocabulary target IDs when those targets become V15 concepts. This keeps historical IndexedDB/Supabase learning events attached to the same learning identity.
+
+### Concept requirements
+
+One concept may participate in several skills without duplicating identity. Examples include vocabulary, grammar, expressions, script/characters and pronunciation targets.
+
+The same concept may therefore appear in listening, recognition, recall, reading, speaking and writing activities while learner evidence remains skill-specific.
+
+### Typed activity requirements
+
+The activity contract may support connected input and explicit exercise types such as dialogue, cloze, matching, word bank, listening, retrieval, fixed speaking, open speaking/writing, reading questions, roleplay, script writing and checkpoints.
+
+Generated or authored activities must be validated before rendering. Arbitrary model-generated HTML must not become a Journey execution path.
+
+### Deterministic curriculum ownership
+
+Curriculum order, prerequisites, competencies and progression remain application-owned and deterministic.
+
+A future AI layer may:
+
+- explain a concept
+- generate a bounded exercise
+- generate content inside a known unit/competency
+- evaluate an open response where appropriate
+- participate in multi-turn roleplay
+
+AI must **not** directly:
+
+- assign mastery values
+- mark units complete
+- promote a learner to a stage/level
+- silently redefine course prerequisites or competency claims
+
+Learner evidence is recorded first; deterministic learning logic decides progression.
+
+### Migration behavior
+
+The active learner runtime remains V14 until native Course Pack data and the V15 runtime have passed parity/regression checks. V7/V8/V9 authoring layers must not become permanent parallel sources after cutover; superseded layers should be removed once Course Packs are authoritative.
+
+## 10. Persistence and accounts
 
 The current implementation supports:
 
@@ -198,19 +251,22 @@ The current implementation supports:
 
 These systems are infrastructure around the learning experience, not the curriculum model itself.
 
-## 10. Offline and hosting
+## 11. Offline and hosting
 
 The application remains a static browser/PWA product hosted from GitHub Pages.
 
-An installed app should cache the runtime modules required for the V14 learning flow, including the connected Journey planner and Hindi pronunciation support.
+An installed app should cache the runtime modules required for the active V14 learning flow, including the connected Journey planner and Hindi pronunciation support.
 
-## 11. Quality gates
+V15 content/compiler work must not require a server just to open authored lessons. Optional future AI features may use an external gateway, but core Journey/Practice/Review/reading/progress should remain functional when AI is unavailable.
+
+## 12. Quality gates
 
 Normal development checks:
 
 ```bash
 npm run ci
 npm run e2e
+npm run course-packs:check
 ```
 
 V14 regression coverage should include:
@@ -226,7 +282,15 @@ V14 regression coverage should include:
 - account/Guest flows where still enabled
 - offline PWA startup
 
-## 12. Current limitation statement
+V15 Course Pack changes should additionally verify:
+
+- stable legacy target identity
+- compiler immutability
+- valid stage/unit/concept references
+- preserved dialogue/reading/checkpoint metadata
+- rejection of unknown activity types and broken references
+
+## 13. Current limitation statement
 
 Language Lab Free should currently be described as:
 

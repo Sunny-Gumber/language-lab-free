@@ -7,8 +7,10 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "check": "node scripts/check-syntax.js",
-    "ci": "npm run check && npm test",
-    "e2e": "playwright test"
+    "ci": "npm run check && npm test && npm run course-packs:check",
+    "e2e": "playwright test",
+    "course-packs:check": "node scripts/build-course-packs.js",
+    "course-packs:build": "node scripts/build-course-packs.js --write"
   },
   "devDependencies": {
     "@playwright/test": "1.55.0"

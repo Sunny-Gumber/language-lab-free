@@ -74,6 +74,30 @@ retrieval
 free response
 ```
 
+## V15 migration foundation — Course Packs
+
+V15 starts by separating **course authoring data** from the learner runtime. The active learner experience remains V14 while the new content contract is validated.
+
+```text
+Existing V7/V8/V9 content
+        ↓
+src/data.js normalization
+        ↓
+src/course-pack.js
+        ↓
+Course Pack
+  ├─ stages
+  ├─ concepts
+  ├─ units
+  └─ typed activity templates
+```
+
+The migration compiler deliberately reuses existing V14 normalization so stable target IDs and authored speech-form equivalence are preserved. Existing item/vocabulary IDs become V15 concept IDs rather than creating a second learning identity.
+
+Japanese and Mandarin are the first reference packs. Generated JSON is currently a migration/debug artifact; it is **not** the active runtime source of truth yet.
+
+See `course-packs/README.md` for the contract and migration rules.
+
 ## Adaptive target selection
 
 The existing adaptive planner still mixes review and new targets:
@@ -178,8 +202,9 @@ The application uses browser ES modules under `src/`:
 - `src/auth-ui.js` — optional account UX
 - `src/writing.js` — touch/stylus/mouse writing pad
 - `src/utils.js` — shared helpers and speech matching
+- `src/course-pack.js` — V15 Course Pack compiler/validator used for migration checks, not active rendering yet
 
-V7/V8/V9 JavaScript files remain **content-authoring layers**, not the active runtime architecture.
+V7/V8/V9 JavaScript files remain temporary **content-authoring layers** during Course Pack parity work. The goal is to remove them after a later V15 runtime cutover instead of maintaining permanent parallel authoring systems.
 
 ## Local, cloud and offline behavior
 
@@ -194,7 +219,9 @@ Optional Supabase:
 - `learning_events`
 - `course_positions`
 
-The service worker cache `language-lab-free-v14-0` includes the V14 Journey, integrated planner, pronunciation support and required runtime assets for offline startup of an already-installed app.
+The service worker cache `language-lab-free-v14-0-1` includes the active V14 Journey, integrated planner, pronunciation support and required runtime assets for offline startup of an already-installed app.
+
+The V15 compiler is not an active browser dependency yet, so this migration foundation does not require a service-worker cache change.
 
 ## Important limitations
 
@@ -218,9 +245,16 @@ These limitations are intentional product statements, not hidden behind “advan
 ```bash
 npm run ci
 npm run e2e
+npm run course-packs:check
 ```
 
-The test suite covers Node/runtime checks plus representative desktop, Android, iPhone, account/Guest, IndexedDB and PWA/offline flows.
+To emit generated Japanese/Mandarin Course Packs for inspection:
+
+```bash
+npm run course-packs:build
+```
+
+The test suite covers Node/runtime checks plus representative desktop, Android, iPhone, account/Guest, IndexedDB and PWA/offline flows. Course Pack tests additionally cover stable identity, connected-content preservation, compiler immutability and reference validation.
 
 ## Hosting
 

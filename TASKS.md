@@ -10,6 +10,31 @@ Language Lab Free is currently positioned as:
 
 V14 is a test-phase learning-model rewrite. Backward compatibility with earlier test progress is not a product blocker unless explicitly requested; security, account isolation and secret-handling rules still apply.
 
+## V15 migration foundation
+
+V15 is being introduced as a **content/data migration**, not as a parallel learner runtime.
+
+### V15.0 — Course Pack foundation
+
+- [x] Add a versioned Course Pack contract for courses, stages, concepts, units and typed activity templates.
+- [x] Add a read-only compiler from the normalized V14 data model so existing stable target IDs remain unchanged.
+- [x] Preserve authored speech-form equivalence, dialogue, reading, production and stage-checkpoint metadata in compiled packs.
+- [x] Add Course Pack validation for duplicate IDs, unknown concept/activity types and broken concept references.
+- [x] Add Japanese/Mandarin reference-pack regression tests.
+- [x] Add CLI checks/build output for migration inspection without switching production runtime loading.
+- [ ] Author native Course Pack files for Japanese and Mandarin after the compiled shape is reviewed.
+- [ ] Switch the learning runtime to Course Pack data only after parity tests prove that V14 behavior and learning-event identity are preserved.
+- [ ] Remove V7/V8/V9 legacy authoring layers after the Course Pack runtime cutover instead of maintaining two permanent systems.
+
+### Later V15 work
+
+- [ ] Add a typed exercise renderer/validator on top of the Course Pack activity contract.
+- [ ] Interleave target introduction and delayed retrieval instead of always `learn → retrieve` immediately.
+- [ ] Upgrade review scheduling around concept × skill evidence while retaining the IndexedDB event ledger as source of truth.
+- [ ] Add deterministic placement/competency mapping before any AI-assisted placement extension.
+- [ ] Add reading vocabulary capture with source-sentence context.
+- [ ] Add an optional bounded AI layer for generated exercises, explanations and multi-turn roleplay; AI must not directly set mastery or progression.
+
 ## Completed / established
 
 ### V14.0.1 runtime cleanup

@@ -2,6 +2,30 @@
 
 All notable product and architecture changes should be recorded here.
 
+## Unreleased — V15 Course Pack foundation
+
+### Content architecture
+
+- Added `src/course-pack.js` with a versioned `15.0` Course Pack contract covering courses, stages, concepts, units and typed activity templates.
+- Added a read-only legacy compiler that consumes the existing normalized V14 course model rather than duplicating stable-ID normalization.
+- Existing item/vocabulary target IDs are preserved as concept IDs so historical learning events remain attached to the same learning identity.
+- Authored speech forms, V9/V14 dialogue, connected reading, production tasks, script focus and stage checkpoints are carried into compiled packs.
+- Added validation for duplicate IDs, unknown concept/activity types, invalid stage references and broken activity/unit concept references.
+
+### Migration tooling and tests
+
+- Added `scripts/build-course-packs.js` to compile/validate Japanese and Mandarin reference packs, with optional `--all` and `--write` modes.
+- Added `npm run course-packs:check` and `npm run course-packs:build`.
+- Added `tests/course-pack.test.js` for stable identity, connected-content preservation, compiler immutability and validation failures.
+- Added `course-packs/README.md` documenting the migration contract and rules.
+- Generated Course Pack JSON remains a debug/migration artifact and is ignored by Git until native authored packs become the source of truth.
+
+### Runtime impact
+
+- No production Journey/runtime cutover is included in this foundation change.
+- V14 remains the active browser runtime, so service-worker assets, IndexedDB event semantics, Guest/account behavior and offline startup are intentionally unchanged.
+- V7/V8/V9 remain temporary authoring sources during parity work; the target is to remove them after a later Course Pack runtime cutover rather than maintain permanent parallel systems.
+
 ## 14.0.1 — 2026-08-30
 
 ### Runtime reliability and load reduction
